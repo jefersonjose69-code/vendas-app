@@ -1,0 +1,178 @@
+import 'package:flutter/material.dart';
+import 'database.dart';
+
+class VendasPage extends StatefulWidget {
+  const VendasPage({super.key});
+
+  @override
+  State<VendasPage> createState() => _VendasPageState();
+}
+
+class _VendasPageState extends State<VendasPage> {
+  List<Map<String, dynamic>> vendedores = [];
+
+  int? vendedorSelecionado;
+
+  final produtoController = TextEditingController();
+  final quantidadeController = TextEditingController(text: '1');
+  final valorController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    carregarVendedores();
+  }
+
+  Future<void> carregarVendedores() async {
+    final dados = await DatabaseHelper.instance.listarVendedores();
+
+    setState(() {
+      vendedores = dados;
+    });
+  }
+
+  Future<void> salvarVenda() async {
+    final produto = produtoController.text.trim();
+    final quantidade = int.tryParse(quantidadeController.text);
+    final valor = double.tryParse(
+      valorController.text.replaceAll(',', '.'),
+    );
+
+    if (vendedorSelecionado == null ||
+        produto.isEmpty ||
+        quantidade == null ||
+        quantidade <= 0 ||
+        valor == null ||
+        valor <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Preencha todos os campos corretamente.'),
+        ),
+      );
+      return;
+    }
+
+    final vendedor = vendedores.firstWhere(
+      (item) => item['id'] == vendedorSelecionado,
+    );
+
+    final comissaoPercentual =
+        (vendedor['comissao'] as num).toDouble();
+
+    final valorTotal = valor * quantidade;
+
+    final comissaoValor =
+        valorTotal * comissaoPercentual / 100;
+
+    final data = DateTime.now().toIso8601String();
+
+    await DatabaseHelper.instance.adicionarVenda(
+      vendedorId: vendedorSelecionado!,
+      produto: produto,
+      quantidade: quantidade,
+      valor: valorTotal,
+      comissaoPercentual: comissaoPercentual,
+      comissaoValor: comissaoValor,
+      data: data,
+    );
+
+    produtoController.clear();
+    quantidadeController.text = '1';
+    valorController.clear();
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Venda registrada com sucesso!'),
+        ),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    produtoController.dispose();
+    quantidadeController.dispose();
+    valorController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Nova Venda'),
+        centerTitle: true,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            DropdownButtonFormField<int>(
+              value: vendedorSelecionado,
+              decoration: const InputDecoration(
+                labelText: 'Vendedor',
+                border: OutlineInputBorder(),
+              ),
+              items: vendedores.map((vendedor) {
+                return DropdownMenuItem<int>(
+                  value: vendedor['id'] as int,
+                  child: Text(vendedor['nome']),
+                );
+              }).toList(),
+              onChanged: (valor) {
+                setState(() {
+                  vendedorSelecionado = valor;
+                });
+              },
+            ),
+
+            const SizedBox(height: 16),
+
+            TextField(
+              controller: produtoController,
+              decoration: const InputDecoration(
+                labelText: 'Produto',
+                border: OutlineInputBorder(),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            TextField(
+              controller: quantidadeController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Quantidade',
+                border: OutlineInputBorder(),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            TextField(
+              controller: valorController,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              decoration: const InputDecoration(
+                labelText: 'Valor unitário',
+                prefixText: 'R\$ ',
+                border: OutlineInputBorder(),
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            ElevatedButton.icon(
+              onPressed: salvarVenda,
+              icon: const Icon(Icons.save),
+              label: const Text('Registrar venda'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
