@@ -163,9 +163,17 @@ class _VendedoresPageState extends State<VendedoresPage> {
         centerTitle: true,
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: abrirCadastro,
-        icon: const Icon(Icons.person_add),
-        label: const Text('Novo vendedor'),
+  onPressed: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const VendasPage(),
+    
+    );
+  },
+  icon: const Icon(Icons.point_of_sale),
+  label: const Text('Nova venda'),
+),,
       ),
       body: vendedores.isEmpty
           ? const Center(
