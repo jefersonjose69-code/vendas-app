@@ -22,10 +22,5 @@ jobs:
       - name: Instalar dependências
         run: flutter pub get
 
-      - name: Criar arquivo do projeto
-        run: |
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
-          git add .
-          git diff --cached --quiet || git commit -m "Criar base do aplicativo"
-          git push
+      - name: Testar projeto
+        run: flutter analyze
