@@ -51,17 +51,39 @@ class DatabaseHelper {
   }
 
   Future<int> adicionarVenda({
-    required int vendedorId,
-    required String produto,
-    required int quantidadeomissao_percentual REAL NOT NULL,
-        comissao_valor REAL NOT NULL,
-        data TEXT NOT NULL,
-        FOREIGN KEY (vendedor_id) REFERENCES vendedores (,
-    required double valor,
-    required double comissaoPercentual,
-    required double comissaoValor,
-    required String data,
-  }) async {
+  required int vendedorId,
+  required String produto,
+  required int quantidade,
+  required double valor,
+  required double desconto,
+  required double valorFinal,
+  required String formaPagamento,
+  required int parcelas,
+  String? cliente,
+  required double comissaoPercentual,
+  required double comissaoValor,
+  required String data,
+}) async {
+  final db = await database;
+
+  return await db.insert(
+    'vendas',
+    {
+      'vendedor_id': vendedorId,
+      'produto': produto,
+      'quantidade': quantidade,
+      'valor': valor,
+      'desconto': desconto,
+      'valor_final': valorFinal,
+      'forma_pagamento': formaPagamento,
+      'parcelas': parcelas,
+      'cliente': cliente,
+      'comissao_percentual': comissaoPercentual,
+      'comissao_valor': comissaoValor,
+      'data': data,
+    },
+  );
+} async {
     final db = await database;
 
     return await db.insert(
