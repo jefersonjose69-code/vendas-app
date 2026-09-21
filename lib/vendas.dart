@@ -153,7 +153,99 @@ class _VendasPageState extends State<VendasPage> {
 
             const SizedBox(height: 16),
 
-            TextField(
+            TextField(const SizedBox(height: 16),
+
+DropdownButtonFormField<String>(
+  value: formaPagamento,
+  decoration: const InputDecoration(
+    labelText: 'Forma de pagamento',
+    border: OutlineInputBorder(),
+  ),
+  items: const [
+    DropdownMenuItem(
+      value: 'À vista',
+      child: Text('À vista'),
+    ),
+    DropdownMenuItem(
+      value: 'PIX',
+      child: Text('PIX - 10% de desconto'),
+    ),
+    DropdownMenuItem(
+      value: 'Cartão',
+      child: Text('Cartão'),
+    ),
+    DropdownMenuItem(
+      value: 'Crediário',
+      child: Text('Crediário'),
+    ),
+  ],
+  onChanged: (valor) {
+    setState(() {
+      formaPagamento = valor!;
+      parcelas = 1;
+    });
+  },
+),
+
+if (formaPagamento == 'Cartão') ...[
+  const SizedBox(height: 16),
+
+  DropdownButtonFormField<int>(
+    value: parcelas,
+    decoration: const InputDecoration(
+      labelText: 'Número de parcelas',
+      border: OutlineInputBorder(),
+    ),
+    items: List.generate(10, (index) {
+      final numero = index + 1;
+
+      return DropdownMenuItem(
+        value: numero,
+        child: Text('${numero}x'),
+      );
+    }),
+    onChanged: (valor) {
+      setState(() {
+        parcelas = valor!;
+      });
+    },
+  ),
+],
+
+if (formaPagamento == 'Crediário') ...[
+  const SizedBox(height: 16),
+
+  TextField(
+    controller: clienteController,
+    decoration: const InputDecoration(
+      labelText: 'Nome do cliente',
+      border: OutlineInputBorder(),
+    ),
+  ),
+
+  const SizedBox(height: 16),
+
+  DropdownButtonFormField<int>(
+    value: parcelas,
+    decoration: const InputDecoration(
+      labelText: 'Número de parcelas',
+      border: OutlineInputBorder(),
+    ),
+    items: List.generate(6, (index) {
+      final numero = index + 1;
+
+      return DropdownMenuItem(
+        value: numero,
+        child: Text('${numero}x'),
+      );
+    }),
+    onChanged: (valor) {
+      setState(() {
+        parcelas = valor!;
+      });
+    },
+  ),
+],
               controller: valorController,
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
