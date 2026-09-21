@@ -45,18 +45,37 @@ class DatabaseHelper {
     ''');
   }
 
-  Future<int> adicionarVendedor(
-    String nome,
-    double comissao,
-  ) async {
+  Future<int> adicionarVenda({
+    required int vendedorId,
+    required String produto,
+    required int quantidade,
+    required double valor,
+    required double comissaoPercentual,
+    required double comissaoValor,
+    required String data,
+  }) async {
     final db = await database;
 
     return await db.insert(
-      'vendedores',
+      'vendas',
       {
-        'nome': nome,
-        'comissao': comissao,
+        'vendedor_id': vendedorId,
+        'produto': produto,
+        'quantidade': quantidade,
+        'valor': valor,
+        'comissao_percentual': comissaoPercentual,
+        'comissao_valor': comissaoValor,
+        'data': data,
       },
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> listarVendas() async {
+    final db = await database;
+
+    return await db.query(
+      'vendas',
+      orderBy: 'data DESC',
     );
   }
 
