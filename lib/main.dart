@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'database.dart';
 import 'vendas.dart';
+
 void main() {
   runApp(const SistemaVendasApp());
 }
