@@ -179,6 +179,8 @@ class _VendasPageState extends State<VendasPage> {
     produtoController.dispose();
     quantidadeController.dispose();
     valorController.dispose();
+    clienteController.dispose();
+    
     super.dispose();
   }
 
