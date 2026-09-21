@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'database.dart';
 
 void main() {
   runApp(const SistemaVendasApp());
@@ -13,22 +14,14 @@ class SistemaVendasApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Sistema de Vendas',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.blue,
+        ),
         useMaterial3: true,
       ),
       home: const VendedoresPage(),
     );
   }
-}
-
-class Vendedor {
-  String nome;
-  double comissao;
-
-  Vendedor({
-    required this.nome,
-    required this.comissao,
-  });
 }
 
 class VendedoresPage extends StatefulWidget {
@@ -39,13 +32,28 @@ class VendedoresPage extends StatefulWidget {
 }
 
 class _VendedoresPageState extends State<VendedoresPage> {
-  final List<Vendedor> vendedores = [];
+  List<Map<String, dynamic>> vendedores = [];
 
   final nomeController = TextEditingController();
   final comissaoController = TextEditingController();
 
-  void adicionarVendedor() {
+  @override
+  void initState() {
+    super.initState();
+    carregarVendedores();
+  }
+
+  Future<void> carregarVendedores() async {
+    final dados = await DatabaseHelper.instance.listarVendedores();
+
+    setState(() {
+      vendedores = dados;
+    });
+  }
+
+  Future<void> adicionarVendedor() async {
     final nome = nomeController.text.trim();
+
     final comissao = double.tryParse(
       comissaoController.text.replaceAll(',', '.'),
     );
@@ -53,7 +61,9 @@ class _VendedoresPageState extends State<VendedoresPage> {
     if (nome.isEmpty || comissao == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Preencha o nome e a comissão corretamente.'),
+          content: Text(
+            'Preencha o nome e a comissão corretamente.',
+          ),
         ),
       );
       return;
@@ -62,25 +72,32 @@ class _VendedoresPageState extends State<VendedoresPage> {
     if (comissao < 0 || comissao > 100) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('A comissão deve estar entre 0% e 100%.'),
+          content: Text(
+            'A comissão deve estar entre 0% e 100%.',
+          ),
         ),
       );
       return;
     }
 
-    setState(() {
-      vendedores.add(
-        Vendedor(
-          nome: nome,
-          comissao: comissao,
-        ),
-      );
-    });
+    await DatabaseHelper.instance.adicionarVendedor(
+      nome,
+      comissao,
+    );
 
     nomeController.clear();
     comissaoController.clear();
 
-    Navigator.pop(context);
+    await carregarVendedores();
+
+    if (mounted) {
+      Navigator.pop(context);
+    }
+  }
+
+  Future<void> excluirVendedor(int id) async {
+    await DatabaseHelper.instance.excluirVendedor(id);
+    await carregarVendedores();
   }
 
   void abrirCadastro() {
@@ -102,14 +119,15 @@ class _VendedoresPageState extends State<VendedoresPage> {
               const SizedBox(height: 15),
               TextField(
                 controller: comissaoController,
-                keyboardType: const TextInputType.numberWithOptions(
+                keyboardType:
+                    const TextInputType.numberWithOptions(
                   decimal: true,
                 ),
                 decoration: const InputDecoration(
-                  labelText: 'Comissão (%)',
+                  labelText: 'Comissão',
                   hintText: 'Ex.: 5',
-                  border: OutlineInputBorder(),
                   suffixText: '%',
+                  border: OutlineInputBorder(),
                 ),
               ),
             ],
@@ -127,12 +145,6 @@ class _VendedoresPageState extends State<VendedoresPage> {
         );
       },
     );
-  }
-
-  void excluirVendedor(int index) {
-    setState(() {
-      vendedores.removeAt(index);
-    });
   }
 
   @override
@@ -172,7 +184,9 @@ class _VendedoresPageState extends State<VendedoresPage> {
                     ),
                   ),
                   SizedBox(height: 8),
-                  Text('Toque em "Novo vendedor" para começar.'),
+                  Text(
+                    'Toque em "Novo vendedor" para começar.',
+                  ),
                 ],
               ),
             )
@@ -188,17 +202,19 @@ class _VendedoresPageState extends State<VendedoresPage> {
                       child: Icon(Icons.person),
                     ),
                     title: Text(
-                      vendedor.nome,
+                      vendedor['nome'],
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     subtitle: Text(
-                      'Comissão: ${vendedor.comissao.toStringAsFixed(2)}%',
+                      'Comissão: '
+                      '${(vendedor['comissao'] as num).toStringAsFixed(2)}%',
                     ),
                     trailing: IconButton(
                       icon: const Icon(Icons.delete),
-                      onPressed: () => excluirVendedor(index),
+                      onPressed: () =>
+                          excluirVendedor(vendedor['id']),
                     ),
                   ),
                 );
