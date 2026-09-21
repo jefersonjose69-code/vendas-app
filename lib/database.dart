@@ -30,13 +30,18 @@ class DatabaseHelper {
     Database db,
     int version,
   ) async {
- await db.execute('''
+    await db.execute('''
       CREATE TABLE vendas (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         vendedor_id INTEGER NOT NULL,
         produto TEXT NOT NULL,
         quantidade INTEGER NOT NULL,
         valor REAL NOT NULL,
+        desconto REAL NOT NULL,
+        valor_final REAL NOT NULL,
+        forma_pagamento TEXT NOT NULL,
+        parcelas INTEGER NOT NULL,
+        cliente TEXT,
         comissao_percentual REAL NOT NULL,
         comissao_valor REAL NOT NULL,
         data TEXT NOT NULL,
@@ -48,7 +53,10 @@ class DatabaseHelper {
   Future<int> adicionarVenda({
     required int vendedorId,
     required String produto,
-    required int quantidade,
+    required int quantidadeomissao_percentual REAL NOT NULL,
+        comissao_valor REAL NOT NULL,
+        data TEXT NOT NULL,
+        FOREIGN KEY (vendedor_id) REFERENCES vendedores (,
     required double valor,
     required double comissaoPercentual,
     required double comissaoValor,
