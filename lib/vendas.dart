@@ -16,7 +16,9 @@ class _VendasPageState extends State<VendasPage> {
   final produtoController = TextEditingController();
   final quantidadeController = TextEditingController(text: '1');
   final valorController = TextEditingController();
-
+  String formaPagamento = 'À vista';
+  int parcelas = 1;
+  final clienteController = TextEditingController();
   @override
   void initState() {
     super.initState();
