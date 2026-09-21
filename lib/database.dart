@@ -30,11 +30,17 @@ class DatabaseHelper {
     Database db,
     int version,
   ) async {
-    await db.execute('''
-      CREATE TABLE vendedores (
+ await db.execute('''
+      CREATE TABLE vendas (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        nome TEXT NOT NULL,
-        comissao REAL NOT NULL
+        vendedor_id INTEGER NOT NULL,
+        produto TEXT NOT NULL,
+        quantidade INTEGER NOT NULL,
+        valor REAL NOT NULL,
+        comissao_percentual REAL NOT NULL,
+        comissao_valor REAL NOT NULL,
+        data TEXT NOT NULL,
+        FOREIGN KEY (vendedor_id) REFERENCES vendedores (id)
       )
     ''');
   }
