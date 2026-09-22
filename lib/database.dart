@@ -83,8 +83,6 @@ class DatabaseHelper {
       )
     ''');
 
-    // Senha vazia significa que o administrador ainda
-    // precisa criar a senha no primeiro acesso.
     await db.insert(
       'admin_config',
       {
@@ -202,23 +200,6 @@ class DatabaseHelper {
   // VENDEDORES
   // ============================================================
 
- Future<int> editarVendedor(
-  int id,
-  String nome,
-  double comissao,
-) async {
-  final db = await database;
-
-  return await db.update(
-    'vendedores',
-    {
-      'nome': nome,
-      'comissao': comissao,
-    },
-    where: 'id = ?',
-    whereArgs: [id],
-  );
-}
   Future<int> adicionarVendedor(
     String nome,
     double comissao,
@@ -240,6 +221,24 @@ class DatabaseHelper {
     return await db.query(
       'vendedores',
       orderBy: 'nome ASC',
+    );
+  }
+
+  Future<int> editarVendedor(
+    int id,
+    String nome,
+    double comissao,
+  ) async {
+    final db = await database;
+
+    return await db.update(
+      'vendedores',
+      {
+        'nome': nome,
+        'comissao': comissao,
+      },
+      where: 'id = ?',
+      whereArgs: [id],
     );
   }
 
@@ -363,5 +362,75 @@ class DatabaseHelper {
         whereArgs: [vendaId],
       );
     });
+  }
+
+  // ============================================================
+  // RELATÓRIO MENSAL DE VENDAS E COMISSÕES
+  // ============================================================
+
+  Future<List<Map<String, dynamic>>> relatorioMensal({
+    required int mes,
+    required int ano,
+  }) async {
+    final db = await database;
+
+    final inicio =
+        '${ano.toString().padLeft(4, '0')}-${mes.toString().padLeft(2, '0')}-01';
+
+    final proximoMes = mes == 12
+        ? '${(ano + 1).toString().padLeft(4, '0')}-01-01'
+        : '${ano.toString().padLeft(4, '0')}-${(mes + 1).toString().padLeft(2, '0')}-01';
+
+    return await db.rawQuery('''
+      SELECT
+        v.id AS vendedor_id,
+        v.nome AS vendedor,
+        COUNT(vendas.id) AS quantidade_vendas,
+        COALESCE(SUM(vendas.valor_final), 0) AS total_vendido,
+        COALESCE(SUM(vendas.comissao_valor), 0) AS total_comissao
+      FROM vendedores v
+      LEFT JOIN vendas
+        ON vendas.vendedor_id = v.id
+        AND vendas.data >= ?
+        AND vendas.data < ?
+      GROUP BY v.id, v.nome
+      ORDER BY total_vendido DESC
+    ''', [
+      inicio,
+      proximoMes,
+    ]);
+  }
+
+  Future<Map<String, double>> totaisRelatorioMensal({
+    required int mes,
+    required int ano,
+  }) async {
+    final db = await database;
+
+    final inicio =
+        '${ano.toString().padLeft(4, '0')}-${mes.toString().padLeft(2, '0')}-01';
+
+    final proximoMes = mes == 12
+        ? '${(ano + 1).toString().padLeft(4, '0')}-01-01'
+        : '${ano.toString().padLeft(4, '0')}-${(mes + 1).toString().padLeft(2, '0')}-01';
+
+    final resultado = await db.rawQuery('''
+      SELECT
+        COALESCE(SUM(valor_final), 0) AS total_vendas,
+        COALESCE(SUM(comissao_valor), 0) AS total_comissoes
+      FROM vendas
+      WHERE data >= ?
+        AND data < ?
+    ''', [
+      inicio,
+      proximoMes,
+    ]);
+
+    return {
+      'totalVendas':
+          (resultado.first['total_vendas'] as num?)?.toDouble() ?? 0.0,
+      'totalComissoes':
+          (resultado.first['total_comissoes'] as num?)?.toDouble() ?? 0.0,
+    };
   }
 }
