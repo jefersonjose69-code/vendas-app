@@ -16,9 +16,11 @@ class _VendasPageState extends State<VendasPage> {
   final produtoController = TextEditingController();
   final quantidadeController = TextEditingController(text: '1');
   final valorController = TextEditingController();
+  final clienteController = TextEditingController();
+
   String formaPagamento = 'À vista';
   int parcelas = 1;
-  final clienteController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
@@ -28,118 +30,31 @@ class _VendasPageState extends State<VendasPage> {
   Future<void> carregarVendedores() async {
     final dados = await DatabaseHelper.instance.listarVendedores();
 
+    if (!mounted) return;
+
     setState(() {
       vendedores = dados;
     });
   }
 
   Future<void> salvarVenda() async {
-  final produto = produtoController.text.trim();
-  final quantidade = int.tryParse(quantidadeController.text);
-  final valorUnitario = double.tryParse(
-    valorController.text.replaceAll(',', '.'),
-  );
-
-  final cliente = clienteController.text.trim();
-
-  if (vendedorSelecionado == null ||
-      produto.isEmpty ||
-      quantidade == null ||
-      quantidade <= 0 ||
-      valorUnitario == null ||
-      valorUnitario <= 0) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Preencha todos os campos corretamente.'),
-      ),
-    );
-    return;
-  }
-
-  if (formaPagamento == 'Crediário' && cliente.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Informe o nome do cliente do crediário.'),
-      ),
-    );
-    return;
-  }
-
-  final valor = valorUnitario * quantidade;
-
-  double desconto = 0;
-
-  if (formaPagamento == 'PIX') {
-    desconto = valor * 0.10;
-  }
-
-  final valorFinal = valor - desconto;
-
-  // Comissão fixa de 1%
-  const comissaoPercentual = 1.0;
-  final comissaoValor = valorFinal * comissaoPercentual / 100;
-
-  final data = DateTime.now().toIso8601String();
-
-  await DatabaseHelper.instance.adicionarVenda(
-    vendedorId: vendedorSelecionado!,
-    produto: produto,
-    quantidade: quantidade,
-    valor: valor,
-    desconto: desconto,
-    valorFinal: valorFinal,
-    formaPagamento: formaPagamento,
-    parcelas: parcelas,
-    cliente: formaPagamento == 'Crediário' ? cliente : null,
-    comissaoPercentual: comissaoPercentual,
-    comissaoValor: comissaoValor,
-    data: data,
-  );
-
-  produtoController.clear();
-  quantidadeController.text = '1';
-  valorController.clear();
-  clienteController.clear();
-
-  setState(() {
-    formaPagamento = 'À vista';
-    parcelas = 1;
-    vendedorSelecionado = null;
-  });
-
-  if (mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Venda registrada! Comissão: R\$ ${comissaoValor.toStringAsFixed(2)}',
-        ),
-      ),
-    );
-  }
-
     final produto = produtoController.text.trim();
-    final quantidadeTexto = int.tryParse(quantidadeController.text);
 
-if (quantidadeTexto == null || quantidadeTexto <= 0) {
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(
-      content: Text('Informe uma quantidade válida.'),
-    ),
-  );
-  return;
-}
+    final quantidadeTexto =
+        int.tryParse(quantidadeController.text);
 
-final quantidade = quantidadeTexto;
-    final valor = double.tryParse(
+    final valorUnitario = double.tryParse(
       valorController.text.replaceAll(',', '.'),
     );
 
+    final cliente = clienteController.text.trim();
+
     if (vendedorSelecionado == null ||
         produto.isEmpty ||
-        quantidade == null ||
-        quantidade <= 0 ||
-        valor == null ||
-        valor <= 0) {
+        quantidadeTexto == null ||
+        quantidadeTexto <= 0 ||
+        valorUnitario == null ||
+        valorUnitario <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Preencha todos os campos corretamente.'),
@@ -148,17 +63,32 @@ final quantidade = quantidadeTexto;
       return;
     }
 
-    final vendedor = vendedores.firstWhere(
-      (item) => item['id'] == vendedorSelecionado,
-    );
+    final quantidade = quantidadeTexto;
 
-    final comissaoPercentual =
-        (vendedor['comissao'] as num).toDouble();
+    if (formaPagamento == 'Crediário' && cliente.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Informe o nome do cliente do crediário.'),
+        ),
+      );
+      return;
+    }
 
-    final valorTotal = valor * quantidade;
+    final valor = valorUnitario * quantidade;
+
+    double desconto = 0;
+
+    if (formaPagamento == 'PIX') {
+      desconto = valor * 0.10;
+    }
+
+    final valorFinal = valor - desconto;
+
+    // Comissão fixa de 1%
+    const comissaoPercentual = 1.0;
 
     final comissaoValor =
-        valorTotal * comissaoPercentual / 100;
+        valorFinal * comissaoPercentual / 100;
 
     final data = DateTime.now().toIso8601String();
 
@@ -166,23 +96,40 @@ final quantidade = quantidadeTexto;
       vendedorId: vendedorSelecionado!,
       produto: produto,
       quantidade: quantidade,
-      valor: valorTotal,
+      valor: valor,
+      desconto: desconto,
+      valorFinal: valorFinal,
+      formaPagamento: formaPagamento,
+      parcelas: parcelas,
+      cliente: formaPagamento == 'Crediário'
+          ? cliente
+          : null,
       comissaoPercentual: comissaoPercentual,
       comissaoValor: comissaoValor,
       data: data,
     );
 
+    if (!mounted) return;
+
     produtoController.clear();
     quantidadeController.text = '1';
     valorController.clear();
+    clienteController.clear();
 
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Venda registrada com sucesso!'),
+    setState(() {
+      formaPagamento = 'À vista';
+      parcelas = 1;
+      vendedorSelecionado = null;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Venda registrada! Comissão: R\$ '
+          '${comissaoValor.toStringAsFixed(2)}',
         ),
-      );
-    }
+      ),
+    );
   }
 
   @override
@@ -191,92 +138,10 @@ final quantidade = quantidadeTexto;
     quantidadeController.dispose();
     valorController.dispose();
     clienteController.dispose();
-    
+
     super.dispose();
   }
-Future<void> salvarVenda() async {
-  final produto = produtoController.text.trim();
-  final quantidade = int.tryParse(quantidadeController.text);
-  final valorUnitario = double.tryParse(
-    valorController.text.replaceAll(',', '.'),
-  );
 
-  final cliente = clienteController.text.trim();
-
-  if (vendedorSelecionado == null ||
-      produto.isEmpty ||
-      quantidade == null ||
-      quantidade <= 0 ||
-      valorUnitario == null ||
-      valorUnitario <= 0) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Preencha todos os campos corretamente.'),
-      ),
-    );
-    return;
-  }
-
-  if (formaPagamento == 'Crediário' && cliente.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Informe o nome do cliente do crediário.'),
-      ),
-    );
-    return;
-  }
-
-  final valor = valorUnitario * quantidade;
-
-  double desconto = 0;
-
-  if (formaPagamento == 'PIX') {
-    desconto = valor * 0.10;
-  }
-
-  final valorFinal = valor - desconto;
-
-  const comissaoPercentual = 1.0;
-  final comissaoValor = valorFinal * comissaoPercentual / 100;
-
-  final data = DateTime.now().toIso8601String();
-
-  await DatabaseHelper.instance.adicionarVenda(
-    vendedorId: vendedorSelecionado!,
-    produto: produto,
-    quantidade: quantidade,
-    valor: valor,
-    desconto: desconto,
-    valorFinal: valorFinal,
-    formaPagamento: formaPagamento,
-    parcelas: parcelas,
-    cliente: formaPagamento == 'Crediário' ? cliente : null,
-    comissaoPercentual: comissaoPercentual,
-    comissaoValor: comissaoValor,
-    data: data,
-  );
-
-  produtoController.clear();
-  quantidadeController.text = '1';
-  valorController.clear();
-  clienteController.clear();
-
-  setState(() {
-    formaPagamento = 'À vista';
-    parcelas = 1;
-    vendedorSelecionado = null;
-  });
-
-  if (mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Venda registrada! Comissão: R\$ ${comissaoValor.toStringAsFixed(2)}',
-        ),
-      ),
-    );
-  }
-}
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -298,7 +163,9 @@ Future<void> salvarVenda() async {
               items: vendedores.map((vendedor) {
                 return DropdownMenuItem<int>(
                   value: vendedor['id'] as int,
-                  child: Text(vendedor['nome']),
+                  child: Text(
+                    vendedor['nome'].toString(),
+                  ),
                 );
               }).toList(),
               onChanged: (valor) {
@@ -331,99 +198,7 @@ Future<void> salvarVenda() async {
 
             const SizedBox(height: 16),
 
-            TextField(const SizedBox(height: 16),
-
-DropdownButtonFormField<String>(
-  value: formaPagamento,
-  decoration: const InputDecoration(
-    labelText: 'Forma de pagamento',
-    border: OutlineInputBorder(),
-  ),
-  items: const [
-    DropdownMenuItem(
-      value: 'À vista',
-      child: Text('À vista'),
-    ),
-    DropdownMenuItem(
-      value: 'PIX',
-      child: Text('PIX - 10% de desconto'),
-    ),
-    DropdownMenuItem(
-      value: 'Cartão',
-      child: Text('Cartão'),
-    ),
-    DropdownMenuItem(
-      value: 'Crediário',
-      child: Text('Crediário'),
-    ),
-  ],
-  onChanged: (valor) {
-    setState(() {
-      formaPagamento = valor!;
-      parcelas = 1;
-    });
-  },
-),
-
-if (formaPagamento == 'Cartão') ...[
-  const SizedBox(height: 16),
-
-  DropdownButtonFormField<int>(
-    value: parcelas,
-    decoration: const InputDecoration(
-      labelText: 'Número de parcelas',
-      border: OutlineInputBorder(),
-    ),
-    items: List.generate(10, (index) {
-      final numero = index + 1;
-
-      return DropdownMenuItem(
-        value: numero,
-        child: Text('${numero}x'),
-      );
-    }),
-    onChanged: (valor) {
-      setState(() {
-        parcelas = valor!;
-      });
-    },
-  ),
-],
-
-if (formaPagamento == 'Crediário') ...[
-  const SizedBox(height: 16),
-
-  TextField(
-    controller: clienteController,
-    decoration: const InputDecoration(
-      labelText: 'Nome do cliente',
-      border: OutlineInputBorder(),
-    ),
-  ),
-
-  const SizedBox(height: 16),
-
-  DropdownButtonFormField<int>(
-    value: parcelas,
-    decoration: const InputDecoration(
-      labelText: 'Número de parcelas',
-      border: OutlineInputBorder(),
-    ),
-    items: List.generate(6, (index) {
-      final numero = index + 1;
-
-      return DropdownMenuItem(
-        value: numero,
-        child: Text('${numero}x'),
-      );
-    }),
-    onChanged: (valor) {
-      setState(() {
-        parcelas = valor!;
-      });
-    },
-  ),
-],
+            TextField(
               controller: valorController,
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
@@ -434,6 +209,100 @@ if (formaPagamento == 'Crediário') ...[
                 border: OutlineInputBorder(),
               ),
             ),
+
+            const SizedBox(height: 16),
+
+            DropdownButtonFormField<String>(
+              value: formaPagamento,
+              decoration: const InputDecoration(
+                labelText: 'Forma de pagamento',
+                border: OutlineInputBorder(),
+              ),
+              items: const [
+                DropdownMenuItem(
+                  value: 'À vista',
+                  child: Text('À vista'),
+                ),
+                DropdownMenuItem(
+                  value: 'PIX',
+                  child: Text('PIX - 10% de desconto'),
+                ),
+                DropdownMenuItem(
+                  value: 'Cartão',
+                  child: Text('Cartão'),
+                ),
+                DropdownMenuItem(
+                  value: 'Crediário',
+                  child: Text('Crediário'),
+                ),
+              ],
+              onChanged: (valor) {
+                setState(() {
+                  formaPagamento = valor!;
+                  parcelas = 1;
+                });
+              },
+            ),
+
+            if (formaPagamento == 'Cartão') ...[
+              const SizedBox(height: 16),
+
+              DropdownButtonFormField<int>(
+                value: parcelas,
+                decoration: const InputDecoration(
+                  labelText: 'Número de parcelas',
+                  border: OutlineInputBorder(),
+                ),
+                items: List.generate(10, (index) {
+                  final numero = index + 1;
+
+                  return DropdownMenuItem(
+                    value: numero,
+                    child: Text('${numero}x'),
+                  );
+                }),
+                onChanged: (valor) {
+                  setState(() {
+                    parcelas = valor!;
+                  });
+                },
+              ),
+            ],
+
+            if (formaPagamento == 'Crediário') ...[
+              const SizedBox(height: 16),
+
+              TextField(
+                controller: clienteController,
+                decoration: const InputDecoration(
+                  labelText: 'Nome do cliente',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              DropdownButtonFormField<int>(
+                value: parcelas,
+                decoration: const InputDecoration(
+                  labelText: 'Número de parcelas',
+                  border: OutlineInputBorder(),
+                ),
+                items: List.generate(6, (index) {
+                  final numero = index + 1;
+
+                  return DropdownMenuItem(
+                    value: numero,
+                    child: Text('${numero}x'),
+                  );
+                }),
+                onChanged: (valor) {
+                  setState(() {
+                    parcelas = valor!;
+                  });
+                },
+              ),
+            ],
 
             const SizedBox(height: 24),
 
