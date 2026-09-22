@@ -2,10 +2,15 @@ import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
 class DatabaseHelper {
+  // Construtor público para permitir DatabaseHelper()
+  DatabaseHelper();
+
+  // Instância principal do banco
   static final DatabaseHelper instance = DatabaseHelper._init();
 
   static Database? _database;
 
+  // Construtor privado usado pela instância principal
   DatabaseHelper._init();
 
   Future<Database> get database async {
