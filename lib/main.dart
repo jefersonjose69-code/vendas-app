@@ -41,98 +41,95 @@ class TelaInicial extends StatelessWidget {
     final controladorSenha = TextEditingController();
     final controladorConfirmacao = TextEditingController();
 
-    bool primeiraVez = senhaAtual.isEmpty;
+    final primeiraVez = senhaAtual.isEmpty;
 
     final resultado = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
       builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: Text(
-                primeiraVez
-                    ? 'Criar senha de administrador'
-                    : 'Acesso administrativo',
-              ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: controladorSenha,
-                    obscureText: true,
-                    keyboardType: TextInputType.number,
-                    decoration: InputDecoration(
-                      labelText:
-                          primeiraVez ? 'Crie uma senha' : 'Digite sua senha',
-                      border: const OutlineInputBorder(),
-                    ),
-                  ),
-                  if (primeiraVez) ...[
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: controladorConfirmacao,
-                      obscureText: true,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Confirme a senha',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: const Text('Cancelar'),
+        return AlertDialog(
+          title: Text(
+            primeiraVez
+                ? 'Criar senha de administrador'
+                : 'Acesso administrativo',
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: controladorSenha,
+                obscureText: true,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText:
+                      primeiraVez ? 'Crie uma senha' : 'Digite sua senha',
+                  border: const OutlineInputBorder(),
                 ),
-                ElevatedButton(
-                  onPressed: () async {
-                    final senha = controladorSenha.text.trim();
-
-                    if (senha.length < 4) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content:
-                              Text('A senha deve ter pelo menos 4 caracteres.'),
-                        ),
-                      );
-                      return;
-                    }
-
-                    if (primeiraVez) {
-                      if (senha != controladorConfirmacao.text.trim()) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('As senhas não conferem.'),
-                          ),
-                        );
-                        return;
-                      }
-
-                      await banco.salvarSenhaAdministrador(senha);
-
-                      if (!context.mounted) return;
-
-                      Navigator.pop(context, true);
-                    } else {
-                      if (senha == senhaAtual) {
-                        Navigator.pop(context, true);
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Senha incorreta.'),
-                          ),
-                        );
-                      }
-                    }
-                  },
-                  child: Text(primeiraVez ? 'Criar' : 'Entrar'),
+              ),
+              if (primeiraVez) ...[
+                const SizedBox(height: 12),
+                TextField(
+                  controller: controladorConfirmacao,
+                  obscureText: true,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Confirme a senha',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
               ],
-            );
-          },
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final senha = controladorSenha.text.trim();
+
+                if (senha.length < 4) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'A senha deve ter pelo menos 4 caracteres.',
+                      ),
+                    ),
+                  );
+                  return;
+                }
+
+                if (primeiraVez) {
+                  if (senha != controladorConfirmacao.text.trim()) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('As senhas não conferem.'),
+                      ),
+                    );
+                    return;
+                  }
+
+                  await banco.salvarSenhaAdministrador(senha);
+
+                  if (!context.mounted) return;
+
+                  Navigator.pop(context, true);
+                } else {
+                  if (senha == senhaAtual) {
+                    Navigator.pop(context, true);
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Senha incorreta.'),
+                      ),
+                    );
+                  }
+                }
+              },
+              child: Text(primeiraVez ? 'Criar' : 'Entrar'),
+            ),
+          ],
         );
       },
     );
@@ -268,9 +265,10 @@ class _AdministracaoPageState extends State<AdministracaoPage> {
 
                 if (nome.isEmpty) return;
 
-                final comissao =
-                    double.tryParse(comissaoController.text.replaceAll(',', '.')) ??
-                        1.0;
+                final comissao = double.tryParse(
+                      comissaoController.text.replaceAll(',', '.'),
+                    ) ??
+                    1.0;
 
                 await banco.adicionarVendedor(nome, comissao);
 
@@ -338,9 +336,10 @@ class _AdministracaoPageState extends State<AdministracaoPage> {
 
                 if (nome.isEmpty) return;
 
-                final comissao =
-                    double.tryParse(comissaoController.text.replaceAll(',', '.')) ??
-                        1.0;
+                final comissao = double.tryParse(
+                      comissaoController.text.replaceAll(',', '.'),
+                    ) ??
+                    1.0;
 
                 await banco.editarVendedor(
                   vendedor['id'],
@@ -467,8 +466,9 @@ class _AdministracaoPageState extends State<AdministracaoPage> {
                 if (novaSenha.length < 4) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content:
-                          Text('A nova senha deve ter pelo menos 4 caracteres.'),
+                      content: Text(
+                        'A nova senha deve ter pelo menos 4 caracteres.',
+                      ),
                     ),
                   );
                   return;
@@ -597,7 +597,7 @@ class _AdministracaoPageState extends State<AdministracaoPage> {
 }
 
 // ============================================================
-// RELATÓRIO MENSAL
+// RELATÓRIO MENSAL / FECHAMENTO
 // ============================================================
 
 class RelatorioMensalPage extends StatefulWidget {
@@ -648,9 +648,11 @@ class _RelatorioMensalPageState extends State<RelatorioMensalPage> {
   }
 
   Future<void> carregarRelatorio() async {
-    setState(() {
-      carregando = true;
-    });
+    if (mounted) {
+      setState(() {
+        carregando = true;
+      });
+    }
 
     final relatorio = await banco.relatorioMensal(
       mes: mesSelecionado,
@@ -666,8 +668,8 @@ class _RelatorioMensalPageState extends State<RelatorioMensalPage> {
 
     setState(() {
       dados = relatorio;
-      totalVendas = totais['totalVendas'] ?? 0;
-      totalComissoes = totais['totalComissoes'] ?? 0;
+      totalVendas = totais['totalVendas'] ?? 0.0;
+      totalComissoes = totais['totalComissoes'] ?? 0.0;
       carregando = false;
     });
   }
@@ -676,24 +678,22 @@ class _RelatorioMensalPageState extends State<RelatorioMensalPage> {
     return 'R\$ ${valor.toStringAsFixed(2).replaceAll('.', ',')}';
   }
 
-  Map<String, dynamic>? get maiorVendedor {
-    if (dados.isEmpty) return null;
-
-    return dados.first;
-  }
-
   @override
   Widget build(BuildContext context) {
-    final maior = maiorVendedor;
-
     double maiorValor = 0;
 
     for (final item in dados) {
-      final valor = (item['total_vendido'] as num?)?.toDouble() ?? 0;
+      final valor = (item['total_vendido'] as num?)?.toDouble() ?? 0.0;
 
       if (valor > maiorValor) {
         maiorValor = valor;
       }
+    }
+
+    Map<String, dynamic>? maiorVendedor;
+
+    if (dados.isNotEmpty) {
+      maiorVendedor = dados.first;
     }
 
     return Scaffold(
@@ -716,7 +716,7 @@ class _RelatorioMensalPageState extends State<RelatorioMensalPage> {
                 padding: const EdgeInsets.all(16),
                 children: [
                   // ========================================================
-                  // SELEÇÃO DO MÊS
+                  // MÊS E ANO
                   // ========================================================
 
                   Row(
@@ -733,7 +733,7 @@ class _RelatorioMensalPageState extends State<RelatorioMensalPage> {
                             (index) {
                               final numero = index + 1;
 
-                              return DropdownMenuItem(
+                              return DropdownMenuItem<int>(
                                 value: numero,
                                 child: Text(nomesMeses[index]),
                               );
@@ -763,7 +763,7 @@ class _RelatorioMensalPageState extends State<RelatorioMensalPage> {
                             (index) {
                               final ano = DateTime.now().year - 2 + index;
 
-                              return DropdownMenuItem(
+                              return DropdownMenuItem<int>(
                                 value: ano,
                                 child: Text(ano.toString()),
                               );
@@ -786,7 +786,7 @@ class _RelatorioMensalPageState extends State<RelatorioMensalPage> {
                   const SizedBox(height: 20),
 
                   // ========================================================
-                  // FECHAMENTO DO MÊS
+                  // FECHAMENTO
                   // ========================================================
 
                   Card(
@@ -803,14 +803,16 @@ class _RelatorioMensalPageState extends State<RelatorioMensalPage> {
                                 size: 28,
                               ),
                               const SizedBox(width: 10),
-                              Text(
-                                'Fechamento do mês',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleLarge
-                                    ?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                              Expanded(
+                                child: Text(
+                                  'Fechamento do mês',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleLarge
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                ),
                               ),
                             ],
                           ),
@@ -865,22 +867,22 @@ class _RelatorioMensalPageState extends State<RelatorioMensalPage> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            maior == null
+                            maiorVendedor == null
                                 ? 'Nenhuma venda no período'
-                                : maior['vendedor'].toString(),
+                                : maiorVendedor['vendedor'].toString(),
                             style: const TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
 
-                          if (maior != null) ...[
+                          if (maiorVendedor != null) ...[
                             const SizedBox(height: 4),
                             Text(
                               dinheiro(
-                                (maior['total_vendido'] as num?)
+                                (maiorVendedor['total_vendido'] as num?)
                                         ?.toDouble() ??
-                                    0,
+                                    0.0,
                               ),
                             ),
                           ],
@@ -920,11 +922,13 @@ class _RelatorioMensalPageState extends State<RelatorioMensalPage> {
                     ...dados.map(
                       (item) {
                         final valor =
-                            (item['total_vendido'] as num?)?.toDouble() ?? 0;
+                            (item['total_vendido'] as num?)?.toDouble() ?? 0.0;
 
-                        final percentual = maiorValor <= 0
+                        final double percentual = maiorValor <= 0
                             ? 0.0
-                            : (valor / maiorValor).clamp(0.0, 1.0);
+                            : (valor / maiorValor)
+                                .clamp(0.0, 1.0)
+                                .toDouble();
 
                         return Card(
                           margin: const EdgeInsets.only(bottom: 10),
@@ -988,10 +992,10 @@ class _RelatorioMensalPageState extends State<RelatorioMensalPage> {
                           (item['quantidade_vendas'] as num?)?.toInt() ?? 0;
 
                       final vendido =
-                          (item['total_vendido'] as num?)?.toDouble() ?? 0;
+                          (item['total_vendido'] as num?)?.toDouble() ?? 0.0;
 
                       final comissao =
-                          (item['total_comissao'] as num?)?.toDouble() ?? 0;
+                          (item['total_comissao'] as num?)?.toDouble() ?? 0.0;
 
                       return Card(
                         child: Padding(
@@ -1024,10 +1028,6 @@ class _RelatorioMensalPageState extends State<RelatorioMensalPage> {
                   ),
 
                   const SizedBox(height: 30),
-
-                  // ========================================================
-                  // AVISO
-                  // ========================================================
 
                   Card(
                     child: Padding(
