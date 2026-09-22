@@ -37,8 +37,7 @@ class _VendedoresPageState extends State<VendedoresPage> {
   List<Map<String, dynamic>> vendedores = [];
 
   final nomeController = TextEditingController();
-  final comissaoController =
-      TextEditingController(text: '1');
+  final comissaoController = TextEditingController(text: '1');
 
   @override
   void initState() {
@@ -128,7 +127,9 @@ class _VendedoresPageState extends State<VendedoresPage> {
                 border: OutlineInputBorder(),
               ),
             ),
+
             const SizedBox(height: 16),
+
             TextField(
               controller: comissaoController,
               keyboardType:
@@ -140,7 +141,9 @@ class _VendedoresPageState extends State<VendedoresPage> {
                 border: OutlineInputBorder(),
               ),
             ),
+
             const SizedBox(height: 16),
+
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
@@ -153,7 +156,9 @@ class _VendedoresPageState extends State<VendedoresPage> {
                 ),
               ),
             ),
+
             const SizedBox(height: 20),
+
             Expanded(
               child: vendedores.isEmpty
                   ? const Center(
@@ -199,49 +204,53 @@ class _VendedoresPageState extends State<VendedoresPage> {
           ],
         ),
       ),
+
       floatingActionButton: Column(
-  mainAxisSize: MainAxisSize.min,
-  children: [
-    FloatingActionButton.extended(
-      heroTag: 'historico',
-      onPressed: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) {
-              return const HistoricoPage();
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FloatingActionButton.extended(
+            heroTag: 'historico',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) {
+                    return const HistoricoPage();
+                  },
+                ),
+              );
             },
+            icon: const Icon(
+              Icons.history,
+            ),
+            label: const Text(
+              'Histórico',
+            ),
           ),
-        );
-      },
-      icon: const Icon(
-        Icons.history,
-      ),
-      label: const Text(
-        'Histórico',
-      ),
-    ),
 
-    const SizedBox(height: 12),
+          const SizedBox(height: 12),
 
-    FloatingActionButton.extended(
-      heroTag: 'nova_venda',
-      onPressed: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) {
-              return const VendasPage();
+          FloatingActionButton.extended(
+            heroTag: 'nova_venda',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) {
+                    return const VendasPage();
+                  },
+                ),
+              );
             },
+            icon: const Icon(
+              Icons.point_of_sale,
+            ),
+            label: const Text(
+              'Nova venda',
+            ),
           ),
-        );
-      },
-      icon: const Icon(
-        Icons.point_of_sale,
+        ],
       ),
-      label: const Text(
-        'Nova venda',
-      ),
-    ),
-  ],
-),
+    );
+  }
+}
