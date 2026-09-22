@@ -36,7 +36,8 @@ class _VendedoresPageState extends State<VendedoresPage> {
   List<Map<String, dynamic>> vendedores = [];
 
   final nomeController = TextEditingController();
-  final comissaoController = TextEditingController();
+  final comissaoController =
+      TextEditingController(text: '1');
 
   @override
   void initState() {
@@ -45,7 +46,10 @@ class _VendedoresPageState extends State<VendedoresPage> {
   }
 
   Future<void> carregarVendedores() async {
-    final dados = await DatabaseHelper.instance.listarVendedores();
+    final dados =
+        await DatabaseHelper.instance.listarVendedores();
+
+    if (!mounted) return;
 
     setState(() {
       vendedores = dados;
@@ -55,31 +59,22 @@ class _VendedoresPageState extends State<VendedoresPage> {
   Future<void> adicionarVendedor() async {
     final nome = nomeController.text.trim();
 
-    final comissao = double.tryParse(
-      comissaoController.text.replaceAll(',', '.'),
-    );
-
-    if (nome.isEmpty || comissao == null) {
+    if (nome.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'Preencha o nome e a comissão corretamente.',
+            'Informe o nome do vendedor.',
           ),
         ),
       );
       return;
     }
 
-    if (comissao < 0 || comissao > 100) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'A comissão deve estar entre 0% e 100%.',
-          ),
-        ),
-      );
-      return;
-    }
+    final comissao =
+        double.tryParse(
+          comissaoController.text.replaceAll(',', '.'),
+        ) ??
+        1.0;
 
     await DatabaseHelper.instance.adicionarVendedor(
       nome,
@@ -87,65 +82,24 @@ class _VendedoresPageState extends State<VendedoresPage> {
     );
 
     nomeController.clear();
-    comissaoController.clear();
+    comissaoController.text = '1';
 
     await carregarVendedores();
 
-    if (mounted) {
-      Navigator.pop(context);
-    }
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Vendedor cadastrado!',
+        ),
+      ),
+    );
   }
 
   Future<void> excluirVendedor(int id) async {
     await DatabaseHelper.instance.excluirVendedor(id);
     await carregarVendedores();
-  }
-
-  void abrirCadastro() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Novo vendedor'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nomeController,
-                decoration: const InputDecoration(
-                  labelText: 'Nome do vendedor',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 15),
-              TextField(
-                controller: comissaoController,
-                keyboardType:
-                    const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                decoration: const InputDecoration(
-                  labelText: 'Comissão',
-                  hintText: 'Ex.: 5',
-                  suffixText: '%',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancelar'),
-            ),
-            ElevatedButton(
-              onPressed: adicionarVendedor,
-              child: const Text('Salvar'),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   @override
@@ -162,73 +116,107 @@ class _VendedoresPageState extends State<VendedoresPage> {
         title: const Text('Vendedores'),
         centerTitle: true,
       ),
-      floatingActionButton: FloatingActionButton.extended(
-  onPressed: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const VendasPage(),
-    
-    );
-  },
-  icon: const Icon(Icons.point_of_sale),
-  label: const Text('Nova venda'),
-),,
-      ),
-      body: vendedores.isEmpty
-          ? const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.people_outline,
-                    size: 80,
-                  ),
-                  SizedBox(height: 15),
-                  Text(
-                    'Nenhum vendedor cadastrado',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    'Toque em "Novo vendedor" para começar.',
-                  ),
-                ],
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            TextField(
+              controller: nomeController,
+              decoration: const InputDecoration(
+                labelText: 'Nome do vendedor',
+                border: OutlineInputBorder(),
               ),
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: vendedores.length,
-              itemBuilder: (context, index) {
-                final vendedor = vendedores[index];
-
-                return Card(
-                  child: ListTile(
-                    leading: const CircleAvatar(
-                      child: Icon(Icons.person),
-                    ),
-                    title: Text(
-                      vendedor['nome'],
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: comissaoController,
+              keyboardType:
+                  const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              decoration: const InputDecoration(
+                labelText: 'Comissão (%)',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: adicionarVendedor,
+                icon: const Icon(
+                  Icons.person_add,
+                ),
+                label: const Text(
+                  'Adicionar vendedor',
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Expanded(
+              child: vendedores.isEmpty
+                  ? const Center(
+                      child: Text(
+                        'Nenhum vendedor cadastrado.',
                       ),
+                    )
+                  : ListView.builder(
+                      itemCount: vendedores.length,
+                      itemBuilder: (context, index) {
+                        final vendedor =
+                            vendedores[index];
+
+                        return Card(
+                          child: ListTile(
+                            leading: const CircleAvatar(
+                              child: Icon(
+                                Icons.person,
+                              ),
+                            ),
+                            title: Text(
+                              vendedor['nome'].toString(),
+                            ),
+                            subtitle: Text(
+                              'Comissão: '
+                              '${vendedor['comissao']}%',
+                            ),
+                            trailing: IconButton(
+                              icon: const Icon(
+                                Icons.delete,
+                              ),
+                              onPressed: () {
+                                excluirVendedor(
+                                  vendedor['id'] as int,
+                                );
+                              },
+                            ),
+                          ),
+                        );
+                      },
                     ),
-                    subtitle: Text(
-                      'Comissão: '
-                      '${(vendedor['comissao'] as num).toStringAsFixed(2)}%',
-                    ),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete),
-                      onPressed: () =>
-                          excluirVendedor(vendedor['id']),
-                    ),
-                  ),
-                );
+            ),
+          ],
+        ),
+      ),
+      floatingActionButton:
+          FloatingActionButton.extended(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) {
+                return const VendasPage();
               },
             ),
+          );
+        },
+        icon: const Icon(
+          Icons.point_of_sale,
+        ),
+        label: const Text(
+          'Nova venda',
+        ),
+      ),
     );
   }
 }
