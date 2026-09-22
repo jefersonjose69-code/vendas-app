@@ -23,7 +23,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -56,7 +56,6 @@ class DatabaseHelper {
         comissao_percentual REAL NOT NULL,
         comissao_valor REAL NOT NULL,
         data TEXT NOT NULL,
-
         total REAL NOT NULL DEFAULT 0,
         juros REAL NOT NULL DEFAULT 0,
         total_com_juros REAL NOT NULL DEFAULT 0,
@@ -76,6 +75,23 @@ class DatabaseHelper {
         comissao_valor REAL NOT NULL
       )
     ''');
+
+    await db.execute('''
+      CREATE TABLE admin_config (
+        id INTEGER PRIMARY KEY,
+        senha TEXT NOT NULL
+      )
+    ''');
+
+    // Senha vazia significa que o administrador ainda
+    // precisa criar a senha no primeiro acesso.
+    await db.insert(
+      'admin_config',
+      {
+        'id': 1,
+        'senha': '',
+      },
+    );
   }
 
   Future<void> _upgradeDB(
@@ -113,7 +129,6 @@ class DatabaseHelper {
         )
       ''');
 
-      // Atualiza vendas antigas.
       await db.execute('''
         UPDATE vendas
         SET
@@ -128,11 +143,64 @@ class DatabaseHelper {
         WHERE total = 0
       ''');
     }
+
+    if (oldVersion < 3) {
+      await db.execute('''
+        CREATE TABLE admin_config (
+          id INTEGER PRIMARY KEY,
+          senha TEXT NOT NULL
+        )
+      ''');
+
+      await db.insert(
+        'admin_config',
+        {
+          'id': 1,
+          'senha': '',
+        },
+      );
+    }
   }
 
-  // =========================
+  // ============================================================
+  // ADMINISTRADOR
+  // ============================================================
+
+  Future<String> obterSenhaAdministrador() async {
+    final db = await database;
+
+    final resultado = await db.query(
+      'admin_config',
+      where: 'id = ?',
+      whereArgs: [1],
+      limit: 1,
+    );
+
+    if (resultado.isEmpty) {
+      return '';
+    }
+
+    return resultado.first['senha'].toString();
+  }
+
+  Future<void> salvarSenhaAdministrador(
+    String senha,
+  ) async {
+    final db = await database;
+
+    await db.update(
+      'admin_config',
+      {
+        'senha': senha,
+      },
+      where: 'id = ?',
+      whereArgs: [1],
+    );
+  }
+
+  // ============================================================
   // VENDEDORES
-  // =========================
+  // ============================================================
 
   Future<int> adicionarVendedor(
     String nome,
@@ -168,9 +236,9 @@ class DatabaseHelper {
     );
   }
 
-  // =========================
-  // NOVA VENDA COM VÁRIOS ITENS
-  // =========================
+  // ============================================================
+  // VENDAS
+  // ============================================================
 
   Future<int> adicionarVenda({
     required int vendedorId,
@@ -201,15 +269,10 @@ class DatabaseHelper {
         'vendas',
         {
           'vendedor_id': vendedorId,
-
-          // Campos mantidos para compatibilidade
-          // com a versão anterior.
           'produto': itens.length == 1
               ? primeiroProduto
               : '${itens.length} produtos',
-
           'quantidade': primeiraQuantidade,
-
           'valor': valor,
           'desconto': desconto,
           'valor_final': valorFinal,
@@ -219,7 +282,6 @@ class DatabaseHelper {
           'comissao_percentual': comissaoPercentual,
           'comissao_valor': comissaoValor,
           'data': data,
-
           'total': valorFinal,
           'juros': juros,
           'total_com_juros': totalComJuros,
@@ -236,10 +298,8 @@ class DatabaseHelper {
             'quantidade': item['quantidade'],
             'valor_unitario': item['valorUnitario'],
             'subtotal': item['subtotal'],
-            'comissao_percentual':
-                item['comissaoPercentual'],
-            'comissao_valor':
-                item['comissaoValor'],
+            'comissao_percentual': item['comissaoPercentual'],
+            'comissao_valor': item['comissaoValor'],
           },
         );
       }
@@ -247,10 +307,6 @@ class DatabaseHelper {
       return vendaId;
     });
   }
-
-  // =========================
-  // LISTAR VENDAS
-  // =========================
 
   Future<List<Map<String, dynamic>>> listarVendas() async {
     final db = await database;
@@ -260,10 +316,6 @@ class DatabaseHelper {
       orderBy: 'data DESC',
     );
   }
-
-  // =========================
-  // ITENS DA VENDA
-  // =========================
 
   Future<List<Map<String, dynamic>>> listarItensVenda(
     int vendaId,
@@ -277,10 +329,6 @@ class DatabaseHelper {
       orderBy: 'id ASC',
     );
   }
-
-  // =========================
-  // EXCLUIR VENDA
-  // =========================
 
   Future<void> excluirVenda(int vendaId) async {
     final db = await database;
