@@ -199,25 +199,49 @@ class _VendedoresPageState extends State<VendedoresPage> {
           ],
         ),
       ),
-      floatingActionButton:
-          FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) {
-                return const VendasPage();
-              },
-            ),
-          );
-        },
-        icon: const Icon(
-          Icons.point_of_sale,
-        ),
-        label: const Text(
-          'Nova venda',
-        ),
+      floatingActionButton: Column(
+  mainAxisSize: MainAxisSize.min,
+  children: [
+    FloatingActionButton.extended(
+      heroTag: 'historico',
+      onPressed: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) {
+              return const HistoricoPage();
+            },
+          ),
+        );
+      },
+      icon: const Icon(
+        Icons.history,
       ),
-    );
-  }
-}
+      label: const Text(
+        'Histórico',
+      ),
+    ),
+
+    const SizedBox(height: 12),
+
+    FloatingActionButton.extended(
+      heroTag: 'nova_venda',
+      onPressed: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) {
+              return const VendasPage();
+            },
+          ),
+        );
+      },
+      icon: const Icon(
+        Icons.point_of_sale,
+      ),
+      label: const Text(
+        'Nova venda',
+      ),
+    ),
+  ],
+),
