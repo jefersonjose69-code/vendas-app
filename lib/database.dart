@@ -202,6 +202,23 @@ class DatabaseHelper {
   // VENDEDORES
   // ============================================================
 
+ Future<int> editarVendedor(
+  int id,
+  String nome,
+  double comissao,
+) async {
+  final db = await database;
+
+  return await db.update(
+    'vendedores',
+    {
+      'nome': nome,
+      'comissao': comissao,
+    },
+    where: 'id = ?',
+    whereArgs: [id],
+  );
+}
   Future<int> adicionarVendedor(
     String nome,
     double comissao,
