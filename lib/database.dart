@@ -9,15 +9,17 @@ class DatabaseHelper {
   DatabaseHelper._init();
 
   Future<Database> get database async {
-    if (_database != null) return _database!;
+    if (_database != null) {
+      return _database!;
+    }
 
     _database = await _initDB('sistema_vendas.db');
     return _database!;
   }
 
-  Future<Database> _initDB(String fileName) async {
+  Future<Database> _initDB(String filePath) async {
     final dbPath = await getDatabasesPath();
-    final path = join(dbPath, fileName);
+    final path = join(dbPath, filePath);
 
     return await openDatabase(
       path,
@@ -30,6 +32,14 @@ class DatabaseHelper {
     Database db,
     int version,
   ) async {
+    await db.execute('''
+      CREATE TABLE vendedores (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nome TEXT NOT NULL,
+        comissao REAL NOT NULL
+      )
+    ''');
+
     await db.execute('''
       CREATE TABLE vendas (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -44,68 +54,23 @@ class DatabaseHelper {
         cliente TEXT,
         comissao_percentual REAL NOT NULL,
         comissao_valor REAL NOT NULL,
-        data TEXT NOT NULL,
-        FOREIGN KEY (vendedor_id) REFERENCES vendedores (id)
+        data TEXT NOT NULL
       )
     ''');
   }
 
-  Future<int> adicionarVenda({
-  required int vendedorId,
-  required String produto,
-  required int quantidade,
-  required double valor,
-  required double desconto,
-  required double valorFinal,
-  required String formaPagamento,
-  required int parcelas,
-  String? cliente,
-  required double comissaoPercentual,
-  required double comissaoValor,
-  required String data,
-}) async {
-  final db = await database;
-
-  return await db.insert(
-    'vendas',
-    {
-      'vendedor_id': vendedorId,
-      'produto': produto,
-      'quantidade': quantidade,
-      'valor': valor,
-      'desconto': desconto,
-      'valor_final': valorFinal,
-      'forma_pagamento': formaPagamento,
-      'parcelas': parcelas,
-      'cliente': cliente,
-      'comissao_percentual': comissaoPercentual,
-      'comissao_valor': comissaoValor,
-      'data': data,
-    },
-  );
-} async {
+  Future<int> adicionarVendedor(
+    String nome,
+    double comissao,
+  ) async {
     final db = await database;
 
     return await db.insert(
-      'vendas',
+      'vendedores',
       {
-        'vendedor_id': vendedorId,
-        'produto': produto,
-        'quantidade': quantidade,
-        'valor': valor,
-        'comissao_percentual': comissaoPercentual,
-        'comissao_valor': comissaoValor,
-        'data': data,
+        'nome': nome,
+        'comissao': comissao,
       },
-    );
-  }
-
-  Future<List<Map<String, dynamic>>> listarVendas() async {
-    final db = await database;
-
-    return await db.query(
-      'vendas',
-      orderBy: 'data DESC',
     );
   }
 
@@ -125,6 +90,50 @@ class DatabaseHelper {
       'vendedores',
       where: 'id = ?',
       whereArgs: [id],
+    );
+  }
+
+  Future<int> adicionarVenda({
+    required int vendedorId,
+    required String produto,
+    required int quantidade,
+    required double valor,
+    required double desconto,
+    required double valorFinal,
+    required String formaPagamento,
+    required int parcelas,
+    String? cliente,
+    required double comissaoPercentual,
+    required double comissaoValor,
+    required String data,
+  }) async {
+    final db = await database;
+
+    return await db.insert(
+      'vendas',
+      {
+        'vendedor_id': vendedorId,
+        'produto': produto,
+        'quantidade': quantidade,
+        'valor': valor,
+        'desconto': desconto,
+        'valor_final': valorFinal,
+        'forma_pagamento': formaPagamento,
+        'parcelas': parcelas,
+        'cliente': cliente,
+        'comissao_percentual': comissaoPercentual,
+        'comissao_valor': comissaoValor,
+        'data': data,
+      },
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> listarVendas() async {
+    final db = await database;
+
+    return await db.query(
+      'vendas',
+      orderBy: 'data DESC',
     );
   }
 }
