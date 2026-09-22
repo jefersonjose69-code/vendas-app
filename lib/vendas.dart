@@ -183,7 +183,89 @@ class _VendasPageState extends State<VendasPage> {
     
     super.dispose();
   }
+Future<void> salvarVenda() async {
+  final produto = produtoController.text.trim();
+  final quantidade = int.tryParse(quantidadeController.text);
+  final valorUnitario = double.tryParse(
+    valorController.text.replaceAll(',', '.'),
+  );
 
+  final cliente = clienteController.text.trim();
+
+  if (vendedorSelecionado == null ||
+      produto.isEmpty ||
+      quantidade == null ||
+      quantidade <= 0 ||
+      valorUnitario == null ||
+      valorUnitario <= 0) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Preencha todos os campos corretamente.'),
+      ),
+    );
+    return;
+  }
+
+  if (formaPagamento == 'Crediário' && cliente.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Informe o nome do cliente do crediário.'),
+      ),
+    );
+    return;
+  }
+
+  final valor = valorUnitario * quantidade;
+
+  double desconto = 0;
+
+  if (formaPagamento == 'PIX') {
+    desconto = valor * 0.10;
+  }
+
+  final valorFinal = valor - desconto;
+
+  const comissaoPercentual = 1.0;
+  final comissaoValor = valorFinal * comissaoPercentual / 100;
+
+  final data = DateTime.now().toIso8601String();
+
+  await DatabaseHelper.instance.adicionarVenda(
+    vendedorId: vendedorSelecionado!,
+    produto: produto,
+    quantidade: quantidade,
+    valor: valor,
+    desconto: desconto,
+    valorFinal: valorFinal,
+    formaPagamento: formaPagamento,
+    parcelas: parcelas,
+    cliente: formaPagamento == 'Crediário' ? cliente : null,
+    comissaoPercentual: comissaoPercentual,
+    comissaoValor: comissaoValor,
+    data: data,
+  );
+
+  produtoController.clear();
+  quantidadeController.text = '1';
+  valorController.clear();
+  clienteController.clear();
+
+  setState(() {
+    formaPagamento = 'À vista';
+    parcelas = 1;
+    vendedorSelecionado = null;
+  });
+
+  if (mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Venda registrada! Comissão: R\$ ${comissaoValor.toStringAsFixed(2)}',
+        ),
+      ),
+    );
+  }
+}
   @override
   Widget build(BuildContext context) {
     return Scaffold(
