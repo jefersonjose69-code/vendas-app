@@ -37,19 +37,134 @@ class TelaInicial extends StatelessWidget {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) {
-          return const VendasPage();
-        },
+        builder: (context) => const VendasPage(),
       ),
     );
   }
 
-  void abrirAdmin(BuildContext context) {
+  Future<void> abrirAdmin(BuildContext context) async {
+    final senhaAtual =
+        await DatabaseHelper.instance.obterSenhaAdministrador();
+
+    if (!context.mounted) return;
+
+    if (senhaAtual.isEmpty) {
+      _criarSenhaAdministrador(context);
+    } else {
+      _loginAdministrador(context, senhaAtual);
+    }
+  }
+
+  void _criarSenhaAdministrador(BuildContext context) {
+    final senhaController = TextEditingController();
+    final confirmarController = TextEditingController();
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.admin_panel_settings),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text('Criar senha do administrador'),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Crie uma senha para proteger a área administrativa.',
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: senhaController,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'Nova senha',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.lock),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: confirmarController,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'Confirmar senha',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.lock_outline),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final senha = senhaController.text;
+                final confirmar = confirmarController.text;
+
+                if (senha.length < 4) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'A senha deve ter pelo menos 4 caracteres.',
+                      ),
+                    ),
+                  );
+                  return;
+                }
+
+                if (senha != confirmar) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'As senhas não são iguais.',
+                      ),
+                    ),
+                  );
+                  return;
+                }
+
+                await DatabaseHelper.instance
+                    .salvarSenhaAdministrador(senha);
+
+                if (!context.mounted) return;
+
+                Navigator.pop(context);
+
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        const AdministracaoPage(),
+                  ),
+                );
+              },
+              child: const Text('Salvar senha'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _loginAdministrador(
+    BuildContext context,
+    String senhaCorreta,
+  ) {
+    final senhaController = TextEditingController();
+
     showDialog(
       context: context,
       builder: (context) {
-        final senhaController = TextEditingController();
-
         return AlertDialog(
           title: const Row(
             children: [
@@ -61,7 +176,6 @@ class TelaInicial extends StatelessWidget {
           content: TextField(
             controller: senhaController,
             obscureText: true,
-            keyboardType: TextInputType.number,
             decoration: const InputDecoration(
               labelText: 'Senha',
               border: OutlineInputBorder(),
@@ -70,30 +184,25 @@ class TelaInicial extends StatelessWidget {
           ),
           actions: [
             TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
+              onPressed: () => Navigator.pop(context),
               child: const Text('Cancelar'),
             ),
             ElevatedButton(
               onPressed: () {
-                if (senhaController.text == '1234') {
+                if (senhaController.text == senhaCorreta) {
                   Navigator.pop(context);
 
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) {
-                        return const AdministracaoPage();
-                      },
+                      builder: (context) =>
+                          const AdministracaoPage(),
                     ),
                   );
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text(
-                        'Senha incorreta.',
-                      ),
+                      content: Text('Senha incorreta.'),
                     ),
                   );
                 }
@@ -120,16 +229,11 @@ class TelaInicial extends StatelessWidget {
         actions: [
           IconButton(
             tooltip: 'Administrador',
-            icon: const Icon(
-              Icons.settings,
-            ),
-            onPressed: () {
-              abrirAdmin(context);
-            },
+            icon: const Icon(Icons.settings),
+            onPressed: () => abrirAdmin(context),
           ),
         ],
       ),
-
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -140,9 +244,7 @@ class TelaInicial extends StatelessWidget {
                 Icons.storefront,
                 size: 90,
               ),
-
               const SizedBox(height: 25),
-
               const Text(
                 'Sistema de Vendas',
                 textAlign: TextAlign.center,
@@ -151,9 +253,7 @@ class TelaInicial extends StatelessWidget {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-
               const SizedBox(height: 10),
-
               const Text(
                 'Gerencie suas vendas de forma simples',
                 textAlign: TextAlign.center,
@@ -161,16 +261,12 @@ class TelaInicial extends StatelessWidget {
                   fontSize: 16,
                 ),
               ),
-
               const SizedBox(height: 45),
-
               SizedBox(
                 width: double.infinity,
                 height: 65,
                 child: ElevatedButton.icon(
-                  onPressed: () {
-                    abrirVendas(context);
-                  },
+                  onPressed: () => abrirVendas(context),
                   icon: const Icon(
                     Icons.point_of_sale,
                     size: 30,
@@ -184,20 +280,6 @@ class TelaInicial extends StatelessWidget {
                   ),
                 ),
               ),
-
-              const SizedBox(height: 20),
-
-              TextButton.icon(
-                onPressed: () {
-                  abrirAdmin(context);
-                },
-                icon: const Icon(
-                  Icons.admin_panel_settings,
-                ),
-                label: const Text(
-                  'Área do Administrador',
-                ),
-              ),
             ],
           ),
         ),
@@ -207,7 +289,7 @@ class TelaInicial extends StatelessWidget {
 }
 
 // ============================================================
-// ÁREA DO ADMINISTRADOR
+// ADMINISTRAÇÃO
 // ============================================================
 
 class AdministracaoPage extends StatefulWidget {
@@ -249,16 +331,13 @@ class _AdministracaoPageState
     if (nome.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            'Informe o nome do vendedor.',
-          ),
+          content: Text('Informe o nome do vendedor.'),
         ),
       );
       return;
     }
 
-    final comissao =
-        double.tryParse(
+    final comissao = double.tryParse(
           comissaoController.text.replaceAll(',', '.'),
         ) ??
         1.0;
@@ -277,25 +356,317 @@ class _AdministracaoPageState
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text(
-          'Vendedor cadastrado!',
-        ),
+        content: Text('Vendedor cadastrado!'),
       ),
     );
   }
 
+  // ==========================================================
+  // EDITAR VENDEDOR
+  // ==========================================================
+
+  void editarVendedor(
+    Map<String, dynamic> vendedor,
+  ) {
+    final nomeControllerEdicao =
+        TextEditingController(
+      text: vendedor['nome'].toString(),
+    );
+
+    final comissaoControllerEdicao =
+        TextEditingController(
+      text: vendedor['comissao'].toString(),
+    );
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text(
+            'Editar vendedor',
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nomeControllerEdicao,
+                decoration: const InputDecoration(
+                  labelText: 'Nome do vendedor',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.person),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              TextField(
+                controller: comissaoControllerEdicao,
+                keyboardType:
+                    const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                decoration: const InputDecoration(
+                  labelText: 'Comissão (%)',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.percent),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+              },
+              child: const Text('Cancelar'),
+            ),
+
+            ElevatedButton.icon(
+              onPressed: () async {
+                final nome =
+                    nomeControllerEdicao.text.trim();
+
+                if (nome.isEmpty) {
+                  ScaffoldMessenger.of(context)
+                      .showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'Informe o nome do vendedor.',
+                      ),
+                    ),
+                  );
+                  return;
+                }
+
+                final comissao = double.tryParse(
+                      comissaoControllerEdicao.text
+                          .replaceAll(',', '.'),
+                    ) ??
+                    1.0;
+
+                await DatabaseHelper.instance
+                    .editarVendedor(
+                  vendedor['id'] as int,
+                  nome,
+                  comissao,
+                );
+
+                if (!dialogContext.mounted) return;
+
+                Navigator.pop(dialogContext);
+
+                await carregarVendedores();
+
+                if (!mounted) return;
+
+                ScaffoldMessenger.of(context)
+                    .showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'Vendedor atualizado!',
+                    ),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.save),
+              label: const Text('Salvar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // ==========================================================
+  // EXCLUIR VENDEDOR
+  // ==========================================================
+
   Future<void> excluirVendedor(int id) async {
-    await DatabaseHelper.instance.excluirVendedor(id);
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text(
+            'Excluir vendedor?',
+          ),
+          content: const Text(
+            'Essa ação excluirá o vendedor do cadastro.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context, false);
+              },
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context, true);
+              },
+              child: const Text('Excluir'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmar != true) return;
+
+    await DatabaseHelper.instance
+        .excluirVendedor(id);
+
     await carregarVendedores();
 
     if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text(
-          'Vendedor excluído.',
-        ),
+        content: Text('Vendedor excluído.'),
       ),
+    );
+  }
+
+  // ==========================================================
+  // ALTERAR SENHA
+  // ==========================================================
+
+  Future<void> alterarSenha() async {
+    final senhaAtualController =
+        TextEditingController();
+
+    final novaSenhaController =
+        TextEditingController();
+
+    final confirmarController =
+        TextEditingController();
+
+    final senhaAtual =
+        await DatabaseHelper.instance
+            .obterSenhaAdministrador();
+
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text(
+            'Alterar senha',
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: senhaAtualController,
+                  obscureText: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Senha atual',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                TextField(
+                  controller: novaSenhaController,
+                  obscureText: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Nova senha',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                TextField(
+                  controller: confirmarController,
+                  obscureText: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Confirmar nova senha',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+              },
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (senhaAtualController.text !=
+                    senhaAtual) {
+                  ScaffoldMessenger.of(context)
+                      .showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'A senha atual está incorreta.',
+                      ),
+                    ),
+                  );
+                  return;
+                }
+
+                final novaSenha =
+                    novaSenhaController.text;
+
+                if (novaSenha.length < 4) {
+                  ScaffoldMessenger.of(context)
+                      .showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'A nova senha deve ter pelo menos 4 caracteres.',
+                      ),
+                    ),
+                  );
+                  return;
+                }
+
+                if (novaSenha !=
+                    confirmarController.text) {
+                  ScaffoldMessenger.of(context)
+                      .showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'As novas senhas não são iguais.',
+                      ),
+                    ),
+                  );
+                  return;
+                }
+
+                await DatabaseHelper.instance
+                    .salvarSenhaAdministrador(
+                  novaSenha,
+                );
+
+                if (!dialogContext.mounted) return;
+
+                Navigator.pop(dialogContext);
+
+                if (!mounted) return;
+
+                ScaffoldMessenger.of(context)
+                    .showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'Senha alterada com sucesso!',
+                    ),
+                  ),
+                );
+              },
+              child: const Text(
+                'Alterar senha',
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -316,6 +687,14 @@ class _AdministracaoPageState
         centerTitle: true,
         actions: [
           IconButton(
+            tooltip: 'Alterar senha',
+            icon: const Icon(
+              Icons.password,
+            ),
+            onPressed: alterarSenha,
+          ),
+
+          IconButton(
             tooltip: 'Histórico de vendas',
             icon: const Icon(
               Icons.history,
@@ -324,9 +703,8 @@ class _AdministracaoPageState
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) {
-                    return const HistoricoPage();
-                  },
+                  builder: (context) =>
+                      const HistoricoPage(),
                 ),
               );
             },
@@ -345,11 +723,13 @@ class _AdministracaoPageState
                   size: 28,
                 ),
                 SizedBox(width: 10),
-                Text(
-                  'Configurações administrativas',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+                Expanded(
+                  child: Text(
+                    'Configurações administrativas',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ],
@@ -442,24 +822,46 @@ class _AdministracaoPageState
                                 Icons.person,
                               ),
                             ),
+
                             title: Text(
                               vendedor['nome']
                                   .toString(),
                             ),
+
                             subtitle: Text(
                               'Comissão: '
                               '${vendedor['comissao']}%',
                             ),
-                            trailing: IconButton(
-                              icon: const Icon(
-                                Icons.delete,
-                              ),
-                              onPressed: () {
-                                excluirVendedor(
-                                  vendedor['id']
-                                      as int,
-                                );
-                              },
+
+                            trailing: Row(
+                              mainAxisSize:
+                                  MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  tooltip: 'Editar',
+                                  icon: const Icon(
+                                    Icons.edit,
+                                  ),
+                                  onPressed: () {
+                                    editarVendedor(
+                                      vendedor,
+                                    );
+                                  },
+                                ),
+
+                                IconButton(
+                                  tooltip: 'Excluir',
+                                  icon: const Icon(
+                                    Icons.delete,
+                                  ),
+                                  onPressed: () {
+                                    excluirVendedor(
+                                      vendedor['id']
+                                          as int,
+                                    );
+                                  },
+                                ),
+                              ],
                             ),
                           ),
                         );
