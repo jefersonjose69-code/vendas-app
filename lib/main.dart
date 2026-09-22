@@ -31,166 +31,114 @@ class SistemaVendasApp extends StatelessWidget {
 class TelaInicial extends StatelessWidget {
   const TelaInicial({super.key});
 
-  Future<void> abrirVendas(BuildContext context) async {
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const VendasPage(),
-      ),
-    );
-  }
+  Future<void> abrirAdministracao(BuildContext context) async {
+    final banco = DatabaseHelper();
 
-  Future<void> abrirAdmin(BuildContext context) async {
-    final senhaAtual =
-        await DatabaseHelper.instance.obterSenhaAdministrador();
+    final senhaAtual = await banco.obterSenhaAdministrador();
 
     if (!context.mounted) return;
 
-    if (senhaAtual.isEmpty) {
-      await _criarSenhaAdministrador(context);
-    } else {
-      await _loginAdministrador(context, senhaAtual);
-    }
-  }
+    final controladorSenha = TextEditingController();
+    final controladorConfirmacao = TextEditingController();
 
-  Future<void> _criarSenhaAdministrador(BuildContext context) async {
-    final senhaController = TextEditingController();
-    final confirmarController = TextEditingController();
+    bool primeiraVez = senhaAtual.isEmpty;
 
     final resultado = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Criar senha do administrador'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: senhaController,
-                obscureText: true,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Nova senha',
-                  border: OutlineInputBorder(),
-                ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text(
+                primeiraVez
+                    ? 'Criar senha de administrador'
+                    : 'Acesso administrativo',
               ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: confirmarController,
-                obscureText: true,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Confirmar senha',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext, false);
-              },
-              child: const Text('Cancelar'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final senha = senhaController.text.trim();
-                final confirmar = confirmarController.text.trim();
-
-                if (senha.length < 4) {
-                  ScaffoldMessenger.of(dialogContext).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'A senha deve ter pelo menos 4 caracteres.',
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: controladorSenha,
+                    obscureText: true,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      labelText:
+                          primeiraVez ? 'Crie uma senha' : 'Digite sua senha',
+                      border: const OutlineInputBorder(),
+                    ),
+                  ),
+                  if (primeiraVez) ...[
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: controladorConfirmacao,
+                      obscureText: true,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Confirme a senha',
+                        border: OutlineInputBorder(),
                       ),
                     ),
-                  );
-                  return;
-                }
+                  ],
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Cancelar'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    final senha = controladorSenha.text.trim();
 
-                if (senha != confirmar) {
-                  ScaffoldMessenger.of(dialogContext).showSnackBar(
-                    const SnackBar(
-                      content: Text('As senhas não conferem.'),
-                    ),
-                  );
-                  return;
-                }
+                    if (senha.length < 4) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content:
+                              Text('A senha deve ter pelo menos 4 caracteres.'),
+                        ),
+                      );
+                      return;
+                    }
 
-                DatabaseHelper.instance
-                    .salvarSenhaAdministrador(senha);
+                    if (primeiraVez) {
+                      if (senha != controladorConfirmacao.text.trim()) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('As senhas não conferem.'),
+                          ),
+                        );
+                        return;
+                      }
 
-                Navigator.pop(dialogContext, true);
-              },
-              child: const Text('Salvar'),
-            ),
-          ],
+                      await banco.salvarSenhaAdministrador(senha);
+
+                      if (!context.mounted) return;
+
+                      Navigator.pop(context, true);
+                    } else {
+                      if (senha == senhaAtual) {
+                        Navigator.pop(context, true);
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Senha incorreta.'),
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  child: Text(primeiraVez ? 'Criar' : 'Entrar'),
+                ),
+              ],
+            );
+          },
         );
       },
     );
 
-    senhaController.dispose();
-    confirmarController.dispose();
-
-    if (resultado == true && context.mounted) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => const AdministracaoPage(),
-        ),
-      );
-    }
-  }
-
-  Future<void> _loginAdministrador(
-    BuildContext context,
-    String senhaCorreta,
-  ) async {
-    final controller = TextEditingController();
-
-    final resultado = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Administrador'),
-          content: TextField(
-            controller: controller,
-            obscureText: true,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: 'Senha',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext, false);
-              },
-              child: const Text('Cancelar'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (controller.text == senhaCorreta) {
-                  Navigator.pop(dialogContext, true);
-                } else {
-                  ScaffoldMessenger.of(dialogContext).showSnackBar(
-                    const SnackBar(
-                      content: Text('Senha incorreta.'),
-                    ),
-                  );
-                }
-              },
-              child: const Text('Entrar'),
-            ),
-          ],
-        );
-      },
-    );
-
-    controller.dispose();
+    controladorSenha.dispose();
+    controladorConfirmacao.dispose();
 
     if (resultado == true && context.mounted) {
       Navigator.push(
@@ -210,11 +158,9 @@ class TelaInicial extends StatelessWidget {
         centerTitle: true,
         actions: [
           IconButton(
-            tooltip: 'Administrador',
             icon: const Icon(Icons.settings),
-            onPressed: () {
-              abrirAdmin(context);
-            },
+            tooltip: 'Administração',
+            onPressed: () => abrirAdministracao(context),
           ),
         ],
       ),
@@ -226,7 +172,12 @@ class TelaInicial extends StatelessWidget {
             height: 65,
             child: ElevatedButton(
               onPressed: () {
-                abrirVendas(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const VendasPage(),
+                  ),
+                );
               },
               child: const Text(
                 'INICIAR VENDAS',
@@ -255,10 +206,9 @@ class AdministracaoPage extends StatefulWidget {
 }
 
 class _AdministracaoPageState extends State<AdministracaoPage> {
-  List<Map<String, dynamic>> vendedores = [];
+  final DatabaseHelper banco = DatabaseHelper();
 
-  final nomeController = TextEditingController();
-  final comissaoController = TextEditingController();
+  List<Map<String, dynamic>> vendedores = [];
 
   @override
   void initState() {
@@ -266,48 +216,40 @@ class _AdministracaoPageState extends State<AdministracaoPage> {
     carregarVendedores();
   }
 
-  @override
-  void dispose() {
-    nomeController.dispose();
-    comissaoController.dispose();
-    super.dispose();
-  }
-
   Future<void> carregarVendedores() async {
-    final lista = await DatabaseHelper.instance.listarVendedores();
+    final dados = await banco.listarVendedores();
 
     if (!mounted) return;
 
     setState(() {
-      vendedores = lista;
+      vendedores = dados;
     });
   }
 
   Future<void> adicionarVendedor() async {
-    nomeController.clear();
-    comissaoController.clear();
+    final nomeController = TextEditingController();
+    final comissaoController = TextEditingController(text: '1');
 
-    await showDialog(
+    final resultado = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) {
+      builder: (context) {
         return AlertDialog(
-          title: const Text('Adicionar vendedor'),
+          title: const Text('Novo vendedor'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: nomeController,
                 decoration: const InputDecoration(
-                  labelText: 'Nome',
+                  labelText: 'Nome do vendedor',
                   border: OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: comissaoController,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
                 decoration: const InputDecoration(
                   labelText: 'Comissão (%)',
                   border: OutlineInputBorder(),
@@ -317,41 +259,24 @@ class _AdministracaoPageState extends State<AdministracaoPage> {
           ),
           actions: [
             TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-              },
+              onPressed: () => Navigator.pop(context, false),
               child: const Text('Cancelar'),
             ),
             ElevatedButton(
               onPressed: () async {
                 final nome = nomeController.text.trim();
 
-                final comissao = double.tryParse(
-                      comissaoController.text
-                          .trim()
-                          .replaceAll(',', '.'),
-                    ) ??
-                    0;
+                if (nome.isEmpty) return;
 
-                if (nome.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Digite o nome do vendedor.'),
-                    ),
-                  );
-                  return;
-                }
+                final comissao =
+                    double.tryParse(comissaoController.text.replaceAll(',', '.')) ??
+                        1.0;
 
-                await DatabaseHelper.instance.adicionarVendedor(
-                  nome,
-                  comissao,
-                );
+                await banco.adicionarVendedor(nome, comissao);
 
-                if (!dialogContext.mounted) return;
+                if (!context.mounted) return;
 
-                Navigator.pop(dialogContext);
-
-                await carregarVendedores();
+                Navigator.pop(context, true);
               },
               child: const Text('Salvar'),
             ),
@@ -359,21 +284,25 @@ class _AdministracaoPageState extends State<AdministracaoPage> {
         );
       },
     );
+
+    nomeController.dispose();
+    comissaoController.dispose();
+
+    if (resultado == true) {
+      carregarVendedores();
+    }
   }
 
-  Future<void> editarVendedor(
-    Map<String, dynamic> vendedor,
-  ) async {
+  Future<void> editarVendedor(Map<String, dynamic> vendedor) async {
     final nomeController =
         TextEditingController(text: vendedor['nome'].toString());
 
-    final comissaoController = TextEditingController(
-      text: vendedor['comissao'].toString(),
-    );
+    final comissaoController =
+        TextEditingController(text: vendedor['comissao'].toString());
 
-    await showDialog(
+    final resultado = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) {
+      builder: (context) {
         return AlertDialog(
           title: const Text('Editar vendedor'),
           content: Column(
@@ -389,9 +318,8 @@ class _AdministracaoPageState extends State<AdministracaoPage> {
               const SizedBox(height: 12),
               TextField(
                 controller: comissaoController,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
                 decoration: const InputDecoration(
                   labelText: 'Comissão (%)',
                   border: OutlineInputBorder(),
@@ -401,35 +329,28 @@ class _AdministracaoPageState extends State<AdministracaoPage> {
           ),
           actions: [
             TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-              },
+              onPressed: () => Navigator.pop(context, false),
               child: const Text('Cancelar'),
             ),
             ElevatedButton(
               onPressed: () async {
                 final nome = nomeController.text.trim();
 
-                final comissao = double.tryParse(
-                      comissaoController.text
-                          .trim()
-                          .replaceAll(',', '.'),
-                    ) ??
-                    0;
-
                 if (nome.isEmpty) return;
 
-                await DatabaseHelper.instance.editarVendedor(
-                  vendedor['id'] as int,
+                final comissao =
+                    double.tryParse(comissaoController.text.replaceAll(',', '.')) ??
+                        1.0;
+
+                await banco.editarVendedor(
+                  vendedor['id'],
                   nome,
                   comissao,
                 );
 
-                if (!dialogContext.mounted) return;
+                if (!context.mounted) return;
 
-                Navigator.pop(dialogContext);
-
-                await carregarVendedores();
+                Navigator.pop(context, true);
               },
               child: const Text('Salvar'),
             ),
@@ -440,28 +361,28 @@ class _AdministracaoPageState extends State<AdministracaoPage> {
 
     nomeController.dispose();
     comissaoController.dispose();
+
+    if (resultado == true) {
+      carregarVendedores();
+    }
   }
 
-  Future<void> excluirVendedor(int id) async {
+  Future<void> excluirVendedor(Map<String, dynamic> vendedor) async {
     final confirmar = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) {
+      builder: (context) {
         return AlertDialog(
           title: const Text('Excluir vendedor'),
-          content: const Text(
-            'Tem certeza que deseja excluir este vendedor?',
+          content: Text(
+            'Deseja excluir ${vendedor['nome']}?',
           ),
           actions: [
             TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext, false);
-              },
+              onPressed: () => Navigator.pop(context, false),
               child: const Text('Cancelar'),
             ),
             ElevatedButton(
-              onPressed: () {
-                Navigator.pop(dialogContext, true);
-              },
+              onPressed: () => Navigator.pop(context, true),
               child: const Text('Excluir'),
             ),
           ],
@@ -469,21 +390,24 @@ class _AdministracaoPageState extends State<AdministracaoPage> {
       },
     );
 
-    if (confirmar != true) return;
-
-    await DatabaseHelper.instance.excluirVendedor(id);
-
-    await carregarVendedores();
+    if (confirmar == true) {
+      await banco.excluirVendedor(vendedor['id']);
+      carregarVendedores();
+    }
   }
 
   Future<void> alterarSenha() async {
-    final atualController = TextEditingController();
-    final novaController = TextEditingController();
-    final confirmarController = TextEditingController();
+    final senhaAtualController = TextEditingController();
+    final novaSenhaController = TextEditingController();
+    final confirmacaoController = TextEditingController();
+
+    final senhaAtual = await banco.obterSenhaAdministrador();
+
+    if (!mounted) return;
 
     await showDialog(
       context: context,
-      builder: (dialogContext) {
+      builder: (context) {
         return AlertDialog(
           title: const Text('Alterar senha'),
           content: SingleChildScrollView(
@@ -491,7 +415,7 @@ class _AdministracaoPageState extends State<AdministracaoPage> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextField(
-                  controller: atualController,
+                  controller: senhaAtualController,
                   obscureText: true,
                   keyboardType: TextInputType.number,
                   decoration: const InputDecoration(
@@ -501,7 +425,7 @@ class _AdministracaoPageState extends State<AdministracaoPage> {
                 ),
                 const SizedBox(height: 12),
                 TextField(
-                  controller: novaController,
+                  controller: novaSenhaController,
                   obscureText: true,
                   keyboardType: TextInputType.number,
                   decoration: const InputDecoration(
@@ -511,7 +435,7 @@ class _AdministracaoPageState extends State<AdministracaoPage> {
                 ),
                 const SizedBox(height: 12),
                 TextField(
-                  controller: confirmarController,
+                  controller: confirmacaoController,
                   obscureText: true,
                   keyboardType: TextInputType.number,
                   decoration: const InputDecoration(
@@ -524,18 +448,13 @@ class _AdministracaoPageState extends State<AdministracaoPage> {
           ),
           actions: [
             TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-              },
+              onPressed: () => Navigator.pop(context),
               child: const Text('Cancelar'),
             ),
             ElevatedButton(
               onPressed: () async {
-                final senhaAtual = await DatabaseHelper.instance
-                    .obterSenhaAdministrador();
-
-                if (atualController.text != senhaAtual) {
-                  ScaffoldMessenger.of(dialogContext).showSnackBar(
+                if (senhaAtualController.text.trim() != senhaAtual) {
+                  ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('Senha atual incorreta.'),
                     ),
@@ -543,35 +462,32 @@ class _AdministracaoPageState extends State<AdministracaoPage> {
                   return;
                 }
 
-                if (novaController.text.length < 4) {
-                  ScaffoldMessenger.of(dialogContext).showSnackBar(
+                final novaSenha = novaSenhaController.text.trim();
+
+                if (novaSenha.length < 4) {
+                  ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text(
-                        'A nova senha deve ter pelo menos 4 caracteres.',
-                      ),
+                      content:
+                          Text('A nova senha deve ter pelo menos 4 caracteres.'),
                     ),
                   );
                   return;
                 }
 
-                if (novaController.text !=
-                    confirmarController.text) {
-                  ScaffoldMessenger.of(dialogContext).showSnackBar(
+                if (novaSenha != confirmacaoController.text.trim()) {
+                  ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('As senhas não conferem.'),
+                      content: Text('As novas senhas não conferem.'),
                     ),
                   );
                   return;
                 }
 
-                await DatabaseHelper.instance
-                    .salvarSenhaAdministrador(
-                  novaController.text,
-                );
+                await banco.salvarSenhaAdministrador(novaSenha);
 
-                if (!dialogContext.mounted) return;
+                if (!context.mounted) return;
 
-                Navigator.pop(dialogContext);
+                Navigator.pop(context);
 
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -586,9 +502,9 @@ class _AdministracaoPageState extends State<AdministracaoPage> {
       },
     );
 
-    atualController.dispose();
-    novaController.dispose();
-    confirmarController.dispose();
+    senhaAtualController.dispose();
+    novaSenhaController.dispose();
+    confirmacaoController.dispose();
   }
 
   @override
@@ -598,8 +514,8 @@ class _AdministracaoPageState extends State<AdministracaoPage> {
         title: const Text('Administração'),
         actions: [
           IconButton(
-            tooltip: 'Relatório mensal',
             icon: const Icon(Icons.bar_chart),
+            tooltip: 'Relatório mensal',
             onPressed: () {
               Navigator.push(
                 context,
@@ -610,8 +526,8 @@ class _AdministracaoPageState extends State<AdministracaoPage> {
             },
           ),
           IconButton(
-            tooltip: 'Histórico',
             icon: const Icon(Icons.history),
+            tooltip: 'Histórico de vendas',
             onPressed: () {
               Navigator.push(
                 context,
@@ -622,80 +538,59 @@ class _AdministracaoPageState extends State<AdministracaoPage> {
             },
           ),
           IconButton(
-            tooltip: 'Alterar senha',
             icon: const Icon(Icons.password),
-            onPressed: () {
-              alterarSenha();
-            },
+            tooltip: 'Alterar senha',
+            onPressed: alterarSenha,
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  adicionarVendedor();
-                },
-                icon: const Icon(Icons.person_add),
-                label: const Text('Adicionar vendedor'),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: vendedores.isEmpty
-                  ? const Center(
-                      child: Text(
-                        'Nenhum vendedor cadastrado.',
-                      ),
-                    )
-                  : ListView.builder(
-                      itemCount: vendedores.length,
-                      itemBuilder: (context, index) {
-                        final vendedor = vendedores[index];
+      body: vendedores.isEmpty
+          ? const Center(
+              child: Text('Nenhum vendedor cadastrado.'),
+            )
+          : ListView.builder(
+              itemCount: vendedores.length,
+              itemBuilder: (context, index) {
+                final vendedor = vendedores[index];
 
-                        return Card(
-                          child: ListTile(
-                            title: Text(
-                              vendedor['nome'].toString(),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            subtitle: Text(
-                              'Comissão: ${vendedor['comissao']}%',
-                            ),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  tooltip: 'Editar',
-                                  icon: const Icon(Icons.edit),
-                                  onPressed: () {
-                                    editarVendedor(vendedor);
-                                  },
-                                ),
-                                IconButton(
-                                  tooltip: 'Excluir',
-                                  icon: const Icon(Icons.delete),
-                                  onPressed: () {
-                                    excluirVendedor(
-                                      vendedor['id'] as int,
-                                    );
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
+                return Card(
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  child: ListTile(
+                    leading: const CircleAvatar(
+                      child: Icon(Icons.person),
                     ),
+                    title: Text(
+                      vendedor['nome'].toString(),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    subtitle: Text(
+                      'Comissão: ${vendedor['comissao']}%',
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.edit),
+                          onPressed: () => editarVendedor(vendedor),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete),
+                          onPressed: () => excluirVendedor(vendedor),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
             ),
-          ],
-        ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: adicionarVendedor,
+        child: const Icon(Icons.add),
       ),
     );
   }
@@ -709,12 +604,12 @@ class RelatorioMensalPage extends StatefulWidget {
   const RelatorioMensalPage({super.key});
 
   @override
-  State<RelatorioMensalPage> createState() =>
-      _RelatorioMensalPageState();
+  State<RelatorioMensalPage> createState() => _RelatorioMensalPageState();
 }
 
-class _RelatorioMensalPageState
-    extends State<RelatorioMensalPage> {
+class _RelatorioMensalPageState extends State<RelatorioMensalPage> {
+  final DatabaseHelper banco = DatabaseHelper();
+
   late int mesSelecionado;
   late int anoSelecionado;
 
@@ -725,7 +620,7 @@ class _RelatorioMensalPageState
 
   bool carregando = true;
 
-  final List<String> nomesMeses = [
+  final List<String> nomesMeses = const [
     'Janeiro',
     'Fevereiro',
     'Março',
@@ -757,14 +652,12 @@ class _RelatorioMensalPageState
       carregando = true;
     });
 
-    final resultado =
-        await DatabaseHelper.instance.relatorioMensal(
+    final relatorio = await banco.relatorioMensal(
       mes: mesSelecionado,
       ano: anoSelecionado,
     );
 
-    final totais =
-        await DatabaseHelper.instance.totaisRelatorioMensal(
+    final totais = await banco.totaisRelatorioMensal(
       mes: mesSelecionado,
       ano: anoSelecionado,
     );
@@ -772,7 +665,7 @@ class _RelatorioMensalPageState
     if (!mounted) return;
 
     setState(() {
-      dados = resultado;
+      dados = relatorio;
       totalVendas = totais['totalVendas'] ?? 0;
       totalComissoes = totais['totalComissoes'] ?? 0;
       carregando = false;
@@ -783,26 +676,35 @@ class _RelatorioMensalPageState
     return 'R\$ ${valor.toStringAsFixed(2).replaceAll('.', ',')}';
   }
 
-  double valorVendido(Map<String, dynamic> item) {
-    return (item['total_vendido'] as num?)?.toDouble() ?? 0;
-  }
+  Map<String, dynamic>? get maiorVendedor {
+    if (dados.isEmpty) return null;
 
-  double valorComissao(Map<String, dynamic> item) {
-    return (item['total_comissao'] as num?)?.toDouble() ?? 0;
-  }
-
-  int quantidadeVendas(Map<String, dynamic> item) {
-    return (item['quantidade_vendas'] as num?)?.toInt() ?? 0;
+    return dados.first;
   }
 
   @override
   Widget build(BuildContext context) {
-    final vendedorCampeao =
-        dados.isNotEmpty ? dados.first['vendedor'].toString() : '';
+    final maior = maiorVendedor;
+
+    double maiorValor = 0;
+
+    for (final item in dados) {
+      final valor = (item['total_vendido'] as num?)?.toDouble() ?? 0;
+
+      if (valor > maiorValor) {
+        maiorValor = valor;
+      }
+    }
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Relatório Mensal'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: carregarRelatorio,
+          ),
+        ],
       ),
       body: carregando
           ? const Center(
@@ -813,6 +715,10 @@ class _RelatorioMensalPageState
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
+                  // ========================================================
+                  // SELEÇÃO DO MÊS
+                  // ========================================================
+
                   Row(
                     children: [
                       Expanded(
@@ -825,13 +731,11 @@ class _RelatorioMensalPageState
                           items: List.generate(
                             12,
                             (index) {
-                              final numeroMes = index + 1;
+                              final numero = index + 1;
 
-                              return DropdownMenuItem<int>(
-                                value: numeroMes,
-                                child: Text(
-                                  nomesMeses[index],
-                                ),
+                              return DropdownMenuItem(
+                                value: numero,
+                                child: Text(nomesMeses[index]),
                               );
                             },
                           ),
@@ -855,12 +759,11 @@ class _RelatorioMensalPageState
                             border: OutlineInputBorder(),
                           ),
                           items: List.generate(
-                            6,
+                            5,
                             (index) {
-                              final ano =
-                                  DateTime.now().year - 2 + index;
+                              final ano = DateTime.now().year - 2 + index;
 
-                              return DropdownMenuItem<int>(
+                              return DropdownMenuItem(
                                 value: ano,
                                 child: Text(ano.toString()),
                               );
@@ -882,75 +785,118 @@ class _RelatorioMensalPageState
 
                   const SizedBox(height: 20),
 
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _CardResumo(
-                          titulo: 'Total vendido',
-                          valor: dinheiro(totalVendas),
-                          icone: Icons.attach_money,
-                        ),
+                  // ========================================================
+                  // FECHAMENTO DO MÊS
+                  // ========================================================
+
+                  Card(
+                    elevation: 3,
+                    child: Padding(
+                      padding: const EdgeInsets.all(18),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.lock_clock,
+                                size: 28,
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                'Fechamento do mês',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleLarge
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            '${nomesMeses[mesSelecionado - 1]} de $anoSelecionado',
+                            style: const TextStyle(
+                              fontSize: 16,
+                            ),
+                          ),
+                          const Divider(height: 28),
+
+                          const Text(
+                            'TOTAL VENDIDO',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            dinheiro(totalVendas),
+                            style: const TextStyle(
+                              fontSize: 27,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+
+                          const SizedBox(height: 18),
+
+                          const Text(
+                            'TOTAL DE COMISSÕES',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            dinheiro(totalComissoes),
+                            style: const TextStyle(
+                              fontSize: 27,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+
+                          const SizedBox(height: 18),
+
+                          const Text(
+                            'VENDEDOR COM MAIOR TOTAL',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            maior == null
+                                ? 'Nenhuma venda no período'
+                                : maior['vendedor'].toString(),
+                            style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+
+                          if (maior != null) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              dinheiro(
+                                (maior['total_vendido'] as num?)
+                                        ?.toDouble() ??
+                                    0,
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _CardResumo(
-                          titulo: 'Comissões',
-                          valor: dinheiro(totalComissoes),
-                          icone: Icons.payments,
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
 
                   const SizedBox(height: 20),
 
-                  if (vendedorCampeao.isNotEmpty)
-                    Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.emoji_events,
-                              size: 38,
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Maior vendedor do mês',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    vendedorCampeao,
-                                    style: const TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  Text(
-                                    dinheiro(
-                                      valorVendido(dados.first),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                  const SizedBox(height: 20),
+                  // ========================================================
+                  // GRÁFICO
+                  // ========================================================
 
                   const Text(
-                    'Vendas por vendedor',
+                    'Desempenho dos vendedores',
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -965,64 +911,110 @@ class _RelatorioMensalPageState
                         padding: EdgeInsets.all(20),
                         child: Center(
                           child: Text(
-                            'Nenhuma venda registrada neste mês.',
+                            'Nenhuma venda encontrada neste mês.',
                           ),
                         ),
                       ),
                     )
                   else
                     ...dados.map(
-                      (item) => _GraficoVendedor(
-                        nome: item['vendedor'].toString(),
-                        valor: valorVendido(item),
-                        total: totalVendas,
-                      ),
+                      (item) {
+                        final valor =
+                            (item['total_vendido'] as num?)?.toDouble() ?? 0;
+
+                        final percentual = maiorValor <= 0
+                            ? 0.0
+                            : (valor / maiorValor).clamp(0.0, 1.0);
+
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: 10),
+                          child: Padding(
+                            padding: const EdgeInsets.all(14),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Icon(Icons.person),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        item['vendedor'].toString(),
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                    ),
+                                    Text(
+                                      dinheiro(valor),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 10),
+                                LinearProgressIndicator(
+                                  value: percentual,
+                                  minHeight: 10,
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
                     ),
 
                   const SizedBox(height: 20),
 
+                  // ========================================================
+                  // DETALHAMENTO
+                  // ========================================================
+
                   const Text(
-                    'Detalhamento',
+                    'Detalhamento por vendedor',
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
 
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
 
                   ...dados.map(
                     (item) {
+                      final quantidade =
+                          (item['quantidade_vendas'] as num?)?.toInt() ?? 0;
+
+                      final vendido =
+                          (item['total_vendido'] as num?)?.toDouble() ?? 0;
+
+                      final comissao =
+                          (item['total_comissao'] as num?)?.toDouble() ?? 0;
+
                       return Card(
-                        child: ListTile(
-                          leading: const CircleAvatar(
-                            child: Icon(Icons.person),
-                          ),
-                          title: Text(
-                            item['vendedor'].toString(),
-                          ),
-                          subtitle: Text(
-                            '${quantidadeVendas(item)} venda(s)',
-                          ),
-                          trailing: Column(
-                            mainAxisAlignment:
-                                MainAxisAlignment.center,
-                            crossAxisAlignment:
-                                CrossAxisAlignment.end,
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                dinheiro(
-                                  valorVendido(item),
-                                ),
+                                item['vendedor'].toString(),
                                 style: const TextStyle(
+                                  fontSize: 18,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
+                              const SizedBox(height: 10),
                               Text(
-                                'Comissão: ${dinheiro(valorComissao(item))}',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                ),
+                                'Quantidade de vendas: $quantidade',
+                              ),
+                              Text(
+                                'Total vendido: ${dinheiro(vendido)}',
+                              ),
+                              Text(
+                                'Comissão: ${dinheiro(comissao)}',
                               ),
                             ],
                           ),
@@ -1030,124 +1022,37 @@ class _RelatorioMensalPageState
                       );
                     },
                   ),
+
+                  const SizedBox(height: 30),
+
+                  // ========================================================
+                  // AVISO
+                  // ========================================================
+
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.info_outline),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'Este fechamento é um resumo do mês selecionado. '
+                              'As vendas continuam registradas no sistema e '
+                              'não são apagadas ou bloqueadas.',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 30),
                 ],
               ),
             ),
-    );
-  }
-}
-
-// ============================================================
-// CARD DE RESUMO
-// ============================================================
-
-class _CardResumo extends StatelessWidget {
-  final String titulo;
-  final String valor;
-  final IconData icone;
-
-  const _CardResumo({
-    required this.titulo,
-    required this.valor,
-    required this.icone,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          children: [
-            Icon(
-              icone,
-              size: 30,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              titulo,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 5),
-            Text(
-              valor,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ============================================================
-// BARRA DO GRÁFICO
-// ============================================================
-
-class _GraficoVendedor extends StatelessWidget {
-  final String nome;
-  final double valor;
-  final double total;
-
-  const _GraficoVendedor({
-    required this.nome,
-    required this.valor,
-    required this.total,
-  });
-
-  String dinheiro(double valor) {
-    return 'R\$ ${valor.toStringAsFixed(2).replaceAll('.', ',')}';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    double percentual = 0;
-
-    if (total > 0) {
-      percentual = valor / total;
-    }
-
-    if (percentual > 1) {
-      percentual = 1;
-    }
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  nome,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              Text(
-                dinheiro(valor),
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: LinearProgressIndicator(
-              value: percentual,
-              minHeight: 20,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
