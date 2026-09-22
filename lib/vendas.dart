@@ -116,9 +116,20 @@ class _VendasPageState extends State<VendasPage> {
       ),
     );
   }
-}
+
     final produto = produtoController.text.trim();
-    final quantidade = int.tryParse(quantidadeController.text);
+    final quantidadeTexto = int.tryParse(quantidadeController.text);
+
+if (quantidadeTexto == null || quantidadeTexto <= 0) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(
+      content: Text('Informe uma quantidade válida.'),
+    ),
+  );
+  return;
+}
+
+final quantidade = quantidadeTexto;
     final valor = double.tryParse(
       valorController.text.replaceAll(',', '.'),
     );
